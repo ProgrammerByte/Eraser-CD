@@ -69,6 +69,37 @@ bool isAssignmentOperator(CXCursor cursor) {
   return false;
 }
 
+void handleFunctionCall(CXCursor cursor) {
+  CXString funcName = clang_getCursorSpelling(cursor);
+  cout << "Function call to '" << funcName << "' Arguments: ";
+
+  clang_visitChildren(
+      cursor,
+      [](CXCursor c, CXCursor parent, CXClientData clientData) {
+        CXCursorKind cursorKind = clang_getCursorKind(c);
+        if (cursorKind == CXCursor_DeclRefExpr) {
+          cout << "variable " << clang_getCursorSpelling(c) << ", ";
+        } else if (clang_getCursorKind(c) == CXCursor_UnaryOperator) {
+          // when & is used
+          clang_visitChildren(
+              c,
+              [](CXCursor inner, CXCursor parent, CXClientData clientData) {
+                if (clang_getCursorKind(inner) == CXCursor_DeclRefExpr) {
+                  cout << "pointer to " << clang_getCursorSpelling(inner)
+                       << ", ";
+                }
+                return CXChildVisit_Break;
+              },
+              nullptr);
+          return CXChildVisit_Continue;
+        }
+
+        return CXChildVisit_Continue;
+      },
+      nullptr);
+  cout << endl;
+}
+
 void classifyVariable(CXCursor cursor, bool isWriteLhs) {
   CXString varNameObj = clang_getCursorSpelling(cursor);
   string varName = clang_getCString(varNameObj);
@@ -176,6 +207,11 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
     }
   }
 
+  if (cursorKind == CXCursor_CallExpr) {
+    handleFunctionCall(cursor);
+    return CXChildVisit_Recurse;
+  }
+
   bool *writeLhsPtr = reinterpret_cast<bool *>(clientData);
   bool initialWriteLhs = *writeLhsPtr;
 
@@ -205,8 +241,8 @@ int main() {
 
   CXIndex index = clang_createIndex(0, 0);
   CXTranslationUnit unit = clang_parseTranslationUnit(
-      index, "../test_files/shared_variables/shared_variables.c", nullptr, 0,
-      nullptr, 0, CXTranslationUnit_None);
+      index, "../test_files/single_files/largest_check.c", nullptr, 0, nullptr,
+      0, CXTranslationUnit_None);
 
   if (unit == nullptr) {
     cerr << "Unable to parse translation unit. Quitting." << endl;
