@@ -86,6 +86,9 @@ void classifyVariable(CXCursor cursor, bool isWriteLhs) {
     variableInfo.isStatic =
         clang_Cursor_getStorageClass(cursor) == CX_SC_Static;
     variableInfo.scopeDepth = scopeDepth;
+    if (scopeDepth == 0 && !variableInfo.isStatic) {
+      return;
+    }
     scopeStack[scopeDepth].insert({varName, variableInfo});
   } else {
     for (int i = scopeDepth; i >= 0; i--) {
@@ -101,6 +104,7 @@ void classifyVariable(CXCursor cursor, bool isWriteLhs) {
   if (!infoFound) {
     variableInfo.scopeDepth = 0;
     variableInfo.isStatic = false;
+    scopeStack[0].insert({varName, variableInfo});
   }
   bool global = variableInfo.scopeDepth == 0;
   bool isStatic = variableInfo.isStatic;
