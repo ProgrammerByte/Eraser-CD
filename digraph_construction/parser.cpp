@@ -9,6 +9,8 @@ struct VariableInfo {
   bool isStatic;  // True if the variable is static, false otherwise
 };
 
+enum BranchType { NONE, IF, ELSE_IF, ELSE, WHILE };
+
 static vector<unordered_map<string, VariableInfo>> scopeStack(0);
 static int inFunc = 0;
 static int scopeDepth = 0;
@@ -178,6 +180,24 @@ void classifyVariable(CXCursor cursor, bool isWriteLhs) {
   cout << action << staticType << variableType << varName << location << endl;
 }
 
+BranchType getBranchType(CXCursor cursor, CXCursor parent) {
+  CXCursorKind cursorKind = clang_getCursorKind(cursor);
+  CXCursorKind parentKind = clang_getCursorKind(parent);
+  if (cursorKind == CXCursor_IfStmt) {
+    return IF;
+  } else if (parentKind == CXCursor_IfStmt &&
+             cursorKind == CXCursor_CompoundStmt) {
+    CXCursor child = clang_getCursorReferenced(cursor);
+    if (clang_getCursorKind(child) == CXCursor_IfStmt) {
+      return ELSE_IF;
+    }
+    return ELSE;
+  } else if (cursorKind == CXCursor_WhileStmt) {
+    return WHILE;
+  }
+  return NONE;
+}
+
 CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
                            CXClientData clientData) {
   if (clang_Location_isFromMainFile(clang_getCursorLocation(cursor)) == 0) {
@@ -224,7 +244,14 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
     *writeLhsPtr = true;
   }
 
+  BranchType branchType = getBranchType(cursor, parent);
+
+  // TODO - WHEN VISITING CHILDREN - APPEND NODES FROM THERE ONTO CURRENT BRANCH
+  // NODE IF APPLICABLE
   clang_visitChildren(cursor, visitor, writeLhsPtr);
+  if (branchType != NONE) {
+    // TODO - HANDLE ME!!!
+  }
   if (cursorKind == CXCursor_CompoundStmt) {
     scopeStack.pop_back();
     scopeDepth -= 1;
