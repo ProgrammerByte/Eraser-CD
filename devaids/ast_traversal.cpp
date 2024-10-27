@@ -23,6 +23,9 @@ int main() {
   clang_visitChildren(
       cursor,
       [](CXCursor c, CXCursor parent, CXClientData client_data) {
+        if (clang_Location_isFromMainFile(clang_getCursorLocation(c)) == 0) {
+          return CXChildVisit_Continue;
+        }
         cout << "Cursor '" << clang_getCursorSpelling(c) << "' of kind '"
              << clang_getCursorKindSpelling(clang_getCursorKind(c)) << " foo"
              << "'\n";

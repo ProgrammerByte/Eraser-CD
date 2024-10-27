@@ -97,8 +97,10 @@ void classifyVariable(CXCursor cursor, bool isWriteLhs) {
       }
     }
   }
+  // If not found then assume global and defined elsewhere
   if (!infoFound) {
-    return;
+    variableInfo.scopeDepth = 0;
+    variableInfo.isStatic = false;
   }
   bool global = variableInfo.scopeDepth == 0;
   bool isStatic = variableInfo.isStatic;
@@ -143,6 +145,10 @@ void classifyVariable(CXCursor cursor, bool isWriteLhs) {
 
 CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
                            CXClientData clientData) {
+  if (clang_Location_isFromMainFile(clang_getCursorLocation(cursor)) == 0) {
+    return CXChildVisit_Continue;
+  }
+
   CXCursorKind cursorKind = clang_getCursorKind(cursor);
   CXCursorKind parentKind =
       clang_getCursorKind(clang_getCursorSemanticParent(cursor));
@@ -195,8 +201,8 @@ int main() {
 
   CXIndex index = clang_createIndex(0, 0);
   CXTranslationUnit unit = clang_parseTranslationUnit(
-      index, "../test_files/single_files/sum_nums.c", nullptr, 0, nullptr, 0,
-      CXTranslationUnit_None);
+      index, "../test_files/shared_variables/shared_variables.c", nullptr, 0,
+      nullptr, 0, CXTranslationUnit_None);
 
   if (unit == nullptr) {
     cerr << "Unable to parse translation unit. Quitting." << endl;
