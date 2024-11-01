@@ -208,18 +208,18 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
   CXCursorKind parentKind =
       clang_getCursorKind(clang_getCursorSemanticParent(cursor));
 
-  if (inFunc && parentKind == CXCursor_TranslationUnit) {
-    // TODO - end current DAG creation
-    inFunc = 0;
-  }
   if (cursorKind == CXCursor_FunctionDecl) {
-    // TODO - start new DAG
     ignoreNextCompound = true;
     scopeDepth += 1;
     scopeStack.push_back(unordered_map<string, VariableInfo>());
     inFunc = 1;
+
+    // TODO - start new DAG here
+    CXString funcName = clang_getCursorSpelling(cursor);
+
   } else if (cursorKind == CXCursor_CompoundStmt) {
     if (ignoreNextCompound) {
+      // maybe start DAG here instead???
       ignoreNextCompound = false;
     } else {
       scopeDepth += 1;
@@ -255,6 +255,11 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
   if (cursorKind == CXCursor_CompoundStmt) {
     scopeStack.pop_back();
     scopeDepth -= 1;
+  }
+  if (cursorKind == CXCursor_FunctionDecl) {
+    ignoreNextCompound = false;
+    inFunc = 0;
+    // MAYBE END DAG HERE INSTEAD???
   }
   if (initialWriteLhs) {
     *writeLhsPtr = false;
