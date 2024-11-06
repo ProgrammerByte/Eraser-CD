@@ -12,7 +12,7 @@ void ConstructionEnvironment::callOnAdd(GraphNode *node) { onAdd(node); }
 void ConstructionEnvironment::onAdd(IfNode *node) {
   ifStack.push_back(node);
   scopeStack.push_back(node);
-  endifListStack.push_back(std::vector<GraphNode *>(0));
+  endifListStack.push_back(std::vector<BasicNode *>(0));
   callOnAdd(node);
 }
 
@@ -20,17 +20,16 @@ void ConstructionEnvironment::onElseAdd() {
   IfNode *ifNode = ifStack.back();
   ifNode->hasElse = true;
   if (currNode != nullptr) {
-    endifListStack.back().push_back(currNode);
+    endifListStack.back().push_back((BasicNode *)currNode);
   }
   currNode = ifStack.back();
 }
 
 void ConstructionEnvironment::onAdd(EndifNode *node) {
   IfNode *ifNode = ifStack.back();
-  std::vector<GraphNode *> endifNodes = endifListStack.back();
+  std::vector<BasicNode *> endifNodes = endifListStack.back();
   for (int i = 0; i < endifNodes.size(); i++) {
-    endifNodes[i]->next = node; // TODO - MOVE next OUT OF BASE CLASS AND MOVE
-                                // TO A ONE CHILD CLASS
+    endifNodes[i]->add(node);
   }
 
   ifStack.pop_back();

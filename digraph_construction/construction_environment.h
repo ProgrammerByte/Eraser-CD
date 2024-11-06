@@ -31,7 +31,7 @@ private:
 
   GraphNode *currNode;
   std::vector<IfNode *> ifStack;
-  std::vector<std::vector<GraphNode *>> endifListStack;
+  std::vector<std::vector<BasicNode *>> endifListStack;
   std::vector<WhileNode *> whileStack;
   std::vector<std::vector<BreakNode *>> breakListStack;
   std::vector<GraphNode *> scopeStack;
