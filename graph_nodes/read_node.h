@@ -1,8 +1,8 @@
 #ifndef READ_NODE_H
 #define READ_NODE_H
-#include "graph_node.h"
+#include "basic_node.h"
 
-class ReadNode : public GraphNode {
+class ReadNode : public BasicNode {
 public:
   explicit ReadNode();
   virtual ~ReadNode();

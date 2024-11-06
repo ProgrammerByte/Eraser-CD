@@ -3,5 +3,5 @@
 
 // Maybe handle both call and return here???
 FunctionCallNode::FunctionCallNode()
-    : GraphNode::GraphNode(NodeType::FUNCTION_CALL) {}
+    : BasicNode::BasicNode(NodeType::FUNCTION_CALL) {}
 FunctionCallNode::~FunctionCallNode() = default;

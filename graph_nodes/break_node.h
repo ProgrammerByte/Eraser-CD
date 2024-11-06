@@ -1,8 +1,8 @@
 #ifndef BREAK_NODE_H
 #define BREAK_NODE_H
-#include "graph_node.h"
+#include "basic_node.h"
 
-class BreakNode : public GraphNode {
+class BreakNode : public BasicNode {
 public:
   explicit BreakNode();
   virtual ~BreakNode();

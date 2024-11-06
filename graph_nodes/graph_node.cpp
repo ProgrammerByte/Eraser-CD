@@ -4,5 +4,3 @@
 GraphNode::GraphNode(NodeType type) : type(type) {}
 
 GraphNode::~GraphNode() = default;
-
-void GraphNode::add(GraphNode *node) { next = node; }

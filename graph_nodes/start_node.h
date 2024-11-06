@@ -1,8 +1,8 @@
 #ifndef START_NODE_H
 #define START_NODE_H
-#include "graph_node.h"
+#include "basic_node.h"
 
-class StartNode : public GraphNode {
+class StartNode : public BasicNode {
 public:
   explicit StartNode();
   virtual ~StartNode();

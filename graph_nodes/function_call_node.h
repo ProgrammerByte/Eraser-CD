@@ -1,8 +1,8 @@
 #ifndef FUNCTION_CALL_NODE_H
 #define FUNCTION_CALL_NODE_H
-#include "graph_node.h"
+#include "basic_node.h"
 
-class FunctionCallNode : public GraphNode {
+class FunctionCallNode : public BasicNode {
 public:
   explicit FunctionCallNode();
   virtual ~FunctionCallNode();

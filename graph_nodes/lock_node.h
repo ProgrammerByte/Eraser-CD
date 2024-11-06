@@ -1,8 +1,8 @@
 #ifndef LOCK_NODE_H
 #define LOCK_NODE_H
-#include "graph_node.h"
+#include "basic_node.h"
 
-class LockNode : public GraphNode {
+class LockNode : public BasicNode {
   // TODO - ADD LOCK INFO HERE!!!
 public:
   explicit LockNode();
