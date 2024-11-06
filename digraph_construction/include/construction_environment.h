@@ -1,12 +1,12 @@
 #ifndef CONSTRUCTION_ENVIRONMENT_H
 #define CONSTRUCTION_ENVIRONMENT_H
-#include "../graph_nodes/break_node.h"
-#include "../graph_nodes/endif_node.h"
-#include "../graph_nodes/endwhile_node.h"
-#include "../graph_nodes/if_node.h"
-#include "../graph_nodes/node_types.h"
-#include "../graph_nodes/return_node.h"
-#include "../graph_nodes/while_node.h"
+#include "break_node.h"
+#include "endif_node.h"
+#include "endwhile_node.h"
+#include "if_node.h"
+#include "node_types.h"
+#include "return_node.h"
+#include "while_node.h"
 #include <memory>
 #include <vector>
 

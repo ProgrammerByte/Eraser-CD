@@ -1,1 +1,5 @@
-*/a.out
+**.out
+**.cmake
+**CMakeCache.txt
+**Makefile
+**/CMakeFiles

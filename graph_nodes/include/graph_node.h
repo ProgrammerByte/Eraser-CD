@@ -9,6 +9,6 @@ public:
   explicit GraphNode(NodeType type);
   virtual ~GraphNode();
 
-  void add(GraphNode *node);
+  void add(GraphNode *node){};
 };
 #endif
