@@ -1,5 +1,4 @@
-#ifndef ENDWHILE_NODE_H
-#define ENDWHILE_NODE_H
+#pragma once
 #include "basic_node.h"
 #include "endwhile_node.h"
 
@@ -9,4 +8,3 @@ public:
   explicit EndwhileNode();
   virtual ~EndwhileNode();
 };
-#endif

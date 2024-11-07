@@ -1,5 +1,4 @@
-#ifndef LOCK_NODE_H
-#define LOCK_NODE_H
+#pragma once
 #include "basic_node.h"
 
 class LockNode : public BasicNode {
@@ -8,4 +7,3 @@ public:
   explicit LockNode();
   virtual ~LockNode();
 };
-#endif

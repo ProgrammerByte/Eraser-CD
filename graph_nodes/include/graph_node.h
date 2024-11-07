@@ -1,5 +1,4 @@
-#ifndef GRAPH_NODE_H
-#define GRAPH_NODE_H
+#pragma once
 #include "node_types.h"
 
 class GraphNode {
@@ -11,4 +10,3 @@ public:
 
   void add(GraphNode *node){};
 };
-#endif

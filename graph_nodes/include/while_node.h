@@ -1,5 +1,4 @@
-#ifndef WHILE_NODE_H
-#define WHILE_NODE_H
+#pragma once
 #include "endwhile_node.h"
 #include "graph_node.h"
 
@@ -12,4 +11,3 @@ public:
   void add(GraphNode *node);
   void add(EndwhileNode *node);
 };
-#endif

@@ -1,5 +1,4 @@
-#ifndef BASIC_NODE_H
-#define BASIC_NODE_H
+#pragma once
 #include "graph_node.h"
 
 class BasicNode : public GraphNode {
@@ -11,4 +10,3 @@ public:
 
   void add(GraphNode *node);
 };
-#endif

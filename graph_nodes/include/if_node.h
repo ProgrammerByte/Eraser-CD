@@ -1,5 +1,4 @@
-#ifndef IF_NODE_H
-#define IF_NODE_H
+#pragma once
 #include "graph_node.h"
 
 class IfNode : public GraphNode {
@@ -11,4 +10,3 @@ public:
   virtual ~IfNode();
   void add(GraphNode *node);
 };
-#endif

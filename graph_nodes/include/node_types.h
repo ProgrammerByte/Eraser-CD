@@ -1,5 +1,4 @@
-#ifndef NODE_TYPES_H
-#define NODE_TYPES_H
+#pragma once
 
 enum NodeType {
   START,
@@ -16,5 +15,3 @@ enum NodeType {
   ENDIF,
   RETURN
 };
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef UNLOCK_NODE_H
-#define UNLOCK_NODE_H
+#pragma once
 #include "basic_node.h"
 
 class UnlockNode : public BasicNode {
@@ -8,4 +7,3 @@ public:
   explicit UnlockNode();
   virtual ~UnlockNode();
 };
-#endif
