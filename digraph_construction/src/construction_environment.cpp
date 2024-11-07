@@ -1,5 +1,10 @@
 #include "construction_environment.h"
 
+StartNode *ConstructionEnvironment::startNewTree() {
+  currNode = new StartNode();
+  return (StartNode *)currNode;
+};
+
 void ConstructionEnvironment::onAdd(GraphNode *node) {
   if (currNode != nullptr) {
     currNode->add(node);
@@ -72,12 +77,18 @@ void ConstructionEnvironment::onAdd(EndwhileNode *node) {
 
 // TODO - IMPLEMENT THESE TWO!!!
 void ConstructionEnvironment::onAdd(BreakNode *node) {
-  onAdd(node);
+  callOnAdd(node);
   breakListStack.back().push_back(node);
   currNode = nullptr;
 }
 
+void ConstructionEnvironment::onAdd(ContinueNode *node) {
+  callOnAdd(node);
+  node->next = whileStack.back();
+  currNode = nullptr;
+}
+
 void ConstructionEnvironment::onAdd(ReturnNode *node) {
-  onAdd(node);
+  callOnAdd(node);
   currNode = nullptr;
 }

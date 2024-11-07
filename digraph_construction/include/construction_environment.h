@@ -1,22 +1,22 @@
 #ifndef CONSTRUCTION_ENVIRONMENT_H
 #define CONSTRUCTION_ENVIRONMENT_H
 #include "break_node.h"
+#include "continue_node.h"
 #include "endif_node.h"
 #include "endwhile_node.h"
 #include "if_node.h"
-#include "node_types.h"
 #include "return_node.h"
+#include "start_node.h"
 #include "while_node.h"
 #include <memory>
 #include <vector>
 
 class ConstructionEnvironment {
 public:
-  NodeType type;
+  explicit ConstructionEnvironment() = default;
+  virtual ~ConstructionEnvironment() = default;
 
-  explicit ConstructionEnvironment();
-  virtual ~ConstructionEnvironment();
-
+  StartNode *startNewTree();
   void onAdd(GraphNode *node);
   void onAdd(IfNode *node);
   void onElseAdd();
@@ -24,6 +24,7 @@ public:
   void onAdd(WhileNode *node);
   void onAdd(EndwhileNode *node);
   void onAdd(BreakNode *node);
+  void onAdd(ContinueNode *node);
   void onAdd(ReturnNode *node);
 
 private:

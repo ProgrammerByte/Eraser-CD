@@ -1,3 +1,16 @@
+#include "break_node.h"
+#include "construction_environment.h"
+#include "continue_node.h"
+#include "endif_node.h"
+#include "endwhile_node.h"
+#include "function_call_node.h"
+#include "if_node.h"
+#include "lock_node.h"
+#include "read_node.h"
+#include "return_node.h"
+#include "start_node.h"
+#include "unlock_node.h"
+#include "write_node.h"
 #include <clang-c/Index.h>
 #include <iostream>
 #include <unordered_map>
@@ -9,12 +22,22 @@ struct VariableInfo {
   bool isStatic;  // True if the variable is static, false otherwise
 };
 
-enum BranchType { NONE, IF, ELSE_IF, ELSE, WHILE };
+enum BranchType {
+  BRANCH_NONE,
+  BRANCH_IF,
+  BRANCH_ELSE_IF,
+  BRANCH_ELSE,
+  BRANCH_WHILE
+};
 
+static unordered_map<string, StartNode *> funcMap = {};
 static vector<unordered_map<string, VariableInfo>> scopeStack(0);
 static int inFunc = 0;
 static int scopeDepth = 0;
 static bool ignoreNextCompound = false;
+static string funcName = "";
+static StartNode *startNode = nullptr;
+static ConstructionEnvironment *environment;
 
 // Utility to convert CXString to ostream easily
 ostream &operator<<(ostream &stream, const CXString &str) {
@@ -23,7 +46,7 @@ ostream &operator<<(ostream &stream, const CXString &str) {
   return stream;
 }
 
-std::string getCursorFilename(CXCursor cursor) {
+string getCursorFilename(CXCursor cursor) {
   CXSourceLocation location = clang_getCursorLocation(cursor);
 
   CXFile file;
@@ -35,7 +58,7 @@ std::string getCursorFilename(CXCursor cursor) {
   }
 
   CXString filename = clang_getFileName(file);
-  std::string result = clang_getCString(filename);
+  string result = clang_getCString(filename);
   clang_disposeString(filename);
 
   return result;
@@ -55,7 +78,7 @@ bool isAssignmentOperator(CXCursor cursor) {
 
   for (unsigned int i = 0; i < numTokens; ++i) {
     CXString tokenSpelling = clang_getTokenSpelling(tu, tokens[i]);
-    std::string token = clang_getCString(tokenSpelling);
+    string token = clang_getCString(tokenSpelling);
 
     if (token == "=" || token == "+=" || token == "-=" || token == "*=" ||
         token == "/=" || token == "++" || token == "--") {
@@ -72,7 +95,7 @@ bool isAssignmentOperator(CXCursor cursor) {
 }
 
 void handleFunctionCall(CXCursor cursor) {
-  CXString funcName = clang_getCursorSpelling(cursor);
+  string funcName = clang_getCString(clang_getCursorSpelling(cursor));
   cout << "Function call to '" << funcName << "' Arguments: ";
 
   clang_visitChildren(
@@ -87,18 +110,26 @@ void handleFunctionCall(CXCursor cursor) {
               c,
               [](CXCursor inner, CXCursor parent, CXClientData clientData) {
                 if (clang_getCursorKind(inner) == CXCursor_DeclRefExpr) {
+                  string var = clang_getCString(clang_getCursorSpelling(inner));
+                  string funcName = *(string *)clientData;
+                  if (funcName == "pthread_mutex_lock") {
+                    environment->onAdd(
+                        new LockNode()); // TODO - LOCK / VARIABLE IDENTIFIERS
+                  } else if (funcName == "pthread_mutex_unlock") {
+                    environment->onAdd(new UnlockNode());
+                  }
                   cout << "pointer to " << clang_getCursorSpelling(inner)
                        << ", ";
                 }
                 return CXChildVisit_Break;
               },
-              nullptr);
+              clientData);
           return CXChildVisit_Continue;
         }
 
         return CXChildVisit_Continue;
       },
-      nullptr);
+      &funcName);
   cout << endl;
 }
 
@@ -133,7 +164,8 @@ void classifyVariable(CXCursor cursor, bool isWriteLhs) {
       }
     }
   }
-  // If not found then assume global and defined elsewhere
+  // TODO - MAYBE NOT NEEDED? If not found then assume global and defined
+  // elsewhere
   if (!infoFound) {
     variableInfo.scopeDepth = 0;
     variableInfo.isStatic = false;
@@ -166,14 +198,10 @@ void classifyVariable(CXCursor cursor, bool isWriteLhs) {
     return;
   }
 
-  if (cursorKind == CXCursor_BinaryOperator ||
-      cursorKind == CXCursor_UnaryOperator) {
-    CXCursor lhsCursor = clang_getCursorReferenced(cursor);
-    if (clang_getCursorKind(lhsCursor) == CXCursor_DeclRefExpr) {
-      CXString lhsVarName = clang_getCursorSpelling(lhsCursor);
-      cout << "Variable write: '" << lhsVarName << "'" << endl;
-      clang_disposeString(lhsVarName);
-    }
+  if (isWriteLhs) {
+    environment->onAdd(new WriteNode()); // TODO - VARIABLE INFO
+  } else {
+    environment->onAdd(new ReadNode()); // TODO - VARIABLE INFO
   }
 
   string action = isWriteLhs ? "Written to " : "Read from ";
@@ -184,26 +212,26 @@ BranchType getBranchType(CXCursor cursor, CXCursor parent) {
   CXCursorKind cursorKind = clang_getCursorKind(cursor);
   CXCursorKind parentKind = clang_getCursorKind(parent);
   if (cursorKind == CXCursor_IfStmt) {
-    return IF;
+    return BRANCH_IF;
   } else if (parentKind == CXCursor_IfStmt &&
              cursorKind == CXCursor_CompoundStmt) {
     CXCursor child = clang_getCursorReferenced(cursor);
     if (clang_getCursorKind(child) == CXCursor_IfStmt) {
-      return ELSE_IF;
+      return BRANCH_ELSE_IF;
     }
-    return ELSE;
+    return BRANCH_ELSE;
   } else if (cursorKind == CXCursor_WhileStmt) {
-    return WHILE;
+    return BRANCH_WHILE;
   }
-  return NONE;
+  return BRANCH_NONE;
 }
 
 CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
                            CXClientData clientData) {
+  // TODO - REMOVE THIS IF STATEMENT IN A BIT!!!
   if (clang_Location_isFromMainFile(clang_getCursorLocation(cursor)) == 0) {
     return CXChildVisit_Continue;
   }
-
   CXCursorKind cursorKind = clang_getCursorKind(cursor);
   CXCursorKind parentKind =
       clang_getCursorKind(clang_getCursorSemanticParent(cursor));
@@ -213,13 +241,10 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
     scopeDepth += 1;
     scopeStack.push_back(unordered_map<string, VariableInfo>());
     inFunc = 1;
-
-    // TODO - start new DAG here
-    CXString funcName = clang_getCursorSpelling(cursor);
-
+    funcName = clang_getCString(clang_getCursorSpelling(cursor));
   } else if (cursorKind == CXCursor_CompoundStmt) {
     if (ignoreNextCompound) {
-      // maybe start DAG here instead???
+      startNode = environment->startNewTree();
       ignoreNextCompound = false;
     } else {
       scopeDepth += 1;
@@ -240,17 +265,36 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
     classifyVariable(cursor, initialWriteLhs);
   }
 
-  if (!initialWriteLhs && isAssignmentOperator(cursor)) {
+  if (cursorKind == CXCursor_BreakStmt) {
+    environment->onAdd(new BreakNode());
+  } else if (cursorKind == CXCursor_ContinueStmt) {
+    environment->onAdd(new ContinueNode());
+  } else if (cursorKind == CXCursor_ReturnStmt) {
+    environment->onAdd(new ReturnNode());
+  } else if (!initialWriteLhs && isAssignmentOperator(cursor)) {
     *writeLhsPtr = true;
   }
 
   BranchType branchType = getBranchType(cursor, parent);
 
+  if (branchType == BRANCH_IF) {
+    environment->onAdd(new IfNode());
+  } else if (branchType == BRANCH_ELSE_IF) {
+    environment->onElseAdd();
+    environment->onAdd(new IfNode());
+  } else if (branchType == BRANCH_ELSE) {
+    environment->onElseAdd();
+  } else if (branchType == BRANCH_WHILE) {
+    environment->onAdd(new WhileNode());
+  }
+
   // TODO - WHEN VISITING CHILDREN - APPEND NODES FROM THERE ONTO CURRENT BRANCH
-  // NODE IF APPLICABLE
+  // NODE BRANCH_IF APPLICABLE
   clang_visitChildren(cursor, visitor, writeLhsPtr);
-  if (branchType != NONE) {
-    // TODO - HANDLE ME!!!
+  if (branchType == BRANCH_IF) {
+    environment->onAdd(new EndifNode());
+  } else if (branchType == BRANCH_WHILE) {
+    environment->onAdd(new EndwhileNode());
   }
   if (cursorKind == CXCursor_CompoundStmt) {
     scopeStack.pop_back();
@@ -259,7 +303,8 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
   if (cursorKind == CXCursor_FunctionDecl) {
     ignoreNextCompound = false;
     inFunc = 0;
-    // MAYBE END DAG HERE INSTEAD???
+    funcMap.insert({funcName, startNode});
+    startNode = nullptr;
   }
   if (initialWriteLhs) {
     *writeLhsPtr = false;
@@ -285,6 +330,7 @@ int main() {
 
   bool isLhs = 0;
 
+  environment = new ConstructionEnvironment();
   clang_visitChildren(cursor, visitor, &isLhs);
 
   clang_disposeTranslationUnit(unit);
