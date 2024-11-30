@@ -5,4 +5,6 @@ class EndifNode : public BasicNode {
 public:
   explicit EndifNode();
   virtual ~EndifNode();
+
+  std::string getPrintableName();
 };

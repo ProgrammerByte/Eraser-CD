@@ -5,4 +5,6 @@ class ReadNode : public BasicNode {
 public:
   explicit ReadNode();
   virtual ~ReadNode();
+
+  std::string getPrintableName();
 };

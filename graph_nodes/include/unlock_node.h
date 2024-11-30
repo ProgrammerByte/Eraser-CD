@@ -6,4 +6,6 @@ class UnlockNode : public BasicNode {
 public:
   explicit UnlockNode();
   virtual ~UnlockNode();
+
+  std::string getPrintableName();
 };

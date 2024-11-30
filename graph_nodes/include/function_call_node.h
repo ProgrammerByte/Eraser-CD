@@ -3,6 +3,10 @@
 
 class FunctionCallNode : public BasicNode {
 public:
-  explicit FunctionCallNode();
+  explicit FunctionCallNode(std::string functionName);
   virtual ~FunctionCallNode();
+  std::string getPrintableName();
+
+private:
+  std::string functionName;
 };

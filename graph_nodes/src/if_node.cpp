@@ -11,3 +11,5 @@ void IfNode::add(GraphNode *node) {
     ifNode = node;
   }
 }
+
+std::string IfNode::getPrintableName() { return "if"; }

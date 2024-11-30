@@ -9,4 +9,5 @@ public:
   explicit IfNode();
   virtual ~IfNode();
   void add(GraphNode *node);
+  std::string getPrintableName();
 };

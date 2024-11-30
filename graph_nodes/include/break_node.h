@@ -5,4 +5,6 @@ class BreakNode : public BasicNode {
 public:
   explicit BreakNode();
   virtual ~BreakNode();
+
+  std::string getPrintableName();
 };

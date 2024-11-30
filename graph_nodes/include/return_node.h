@@ -5,4 +5,6 @@ class ReturnNode : public BasicNode {
 public:
   explicit ReturnNode();
   virtual ~ReturnNode();
+
+  std::string getPrintableName();
 };

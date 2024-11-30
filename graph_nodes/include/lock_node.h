@@ -6,4 +6,6 @@ class LockNode : public BasicNode {
 public:
   explicit LockNode();
   virtual ~LockNode();
+
+  std::string getPrintableName();
 };

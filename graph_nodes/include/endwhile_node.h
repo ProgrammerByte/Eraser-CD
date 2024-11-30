@@ -7,4 +7,6 @@ public:
   int numBreaks = 0;
   explicit EndwhileNode();
   virtual ~EndwhileNode();
+
+  std::string getPrintableName();
 };

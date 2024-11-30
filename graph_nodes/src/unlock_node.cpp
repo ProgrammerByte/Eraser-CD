@@ -3,3 +3,6 @@
 
 UnlockNode::UnlockNode() : BasicNode::BasicNode(NodeType::UNLOCK) {}
 UnlockNode::~UnlockNode() = default;
+
+// TODO - IDENTIFIER
+std::string UnlockNode::getPrintableName() { return "Unlock"; }

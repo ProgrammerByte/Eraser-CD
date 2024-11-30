@@ -5,4 +5,6 @@ class ContinueNode : public BasicNode {
 public:
   explicit ContinueNode();
   virtual ~ContinueNode();
+
+  std::string getPrintableName();
 };

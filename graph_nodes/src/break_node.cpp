@@ -3,3 +3,5 @@
 
 BreakNode::BreakNode() : BasicNode::BasicNode(NodeType::BREAK) {}
 BreakNode::~BreakNode() = default;
+
+std::string BreakNode::getPrintableName() { return "break"; }

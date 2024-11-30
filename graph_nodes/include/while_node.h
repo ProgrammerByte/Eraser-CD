@@ -10,4 +10,5 @@ public:
   virtual ~WhileNode();
   void add(GraphNode *node);
   void add(EndwhileNode *node);
+  std::string getPrintableName();
 };

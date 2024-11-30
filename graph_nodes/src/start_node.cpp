@@ -3,3 +3,6 @@
 
 StartNode::StartNode() : BasicNode::BasicNode(NodeType::START) {}
 StartNode::~StartNode() = default;
+
+// TODO - ADD FUNCTION NAME HERE MAYBE???
+std::string StartNode::getPrintableName() { return "Function"; }

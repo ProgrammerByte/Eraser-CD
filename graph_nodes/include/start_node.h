@@ -5,4 +5,6 @@ class StartNode : public BasicNode {
 public:
   explicit StartNode();
   virtual ~StartNode();
+
+  std::string getPrintableName();
 };

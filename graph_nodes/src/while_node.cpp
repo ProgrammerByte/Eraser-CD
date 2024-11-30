@@ -7,3 +7,5 @@ WhileNode::~WhileNode() = default;
 void WhileNode::add(GraphNode *node) { whileNode = node; }
 
 void WhileNode::add(EndwhileNode *node) { endWhile = node; }
+
+std::string WhileNode::getPrintableName() { return "while"; }

@@ -3,3 +3,6 @@
 
 LockNode::LockNode() : BasicNode::BasicNode(NodeType::LOCK) {}
 LockNode::~LockNode() = default;
+
+// TODO - IDENTIFIER
+std::string LockNode::getPrintableName() { return "Lock"; }

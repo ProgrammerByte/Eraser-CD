@@ -4,4 +4,4 @@
 **Makefile
 **/CMakeFiles
 **.a
-digraph_construction
+digraph_construction/digraph_construction

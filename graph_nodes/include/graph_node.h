@@ -1,5 +1,6 @@
 #pragma once
 #include "node_types.h"
+#include <string>
 
 class GraphNode {
 public:
@@ -9,4 +10,5 @@ public:
   virtual ~GraphNode();
 
   void add(GraphNode *node){};
+  std::string getPrintableName() { return "Stub"; };
 };

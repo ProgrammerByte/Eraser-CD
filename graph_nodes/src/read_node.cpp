@@ -3,3 +3,6 @@
 
 ReadNode::ReadNode() : BasicNode::BasicNode(NodeType::READ) {}
 ReadNode::~ReadNode() = default;
+
+// TODO - IDENTIFIER
+std::string ReadNode::getPrintableName() { return "Read"; }
