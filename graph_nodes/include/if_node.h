@@ -8,6 +8,7 @@ public:
   bool hasElse = false;
   explicit IfNode();
   virtual ~IfNode();
+  GraphNode *getNextNode();
   void add(GraphNode *node);
   std::string getPrintableName();
 };

@@ -8,5 +8,6 @@ public:
   explicit BasicNode(NodeType type);
   virtual ~BasicNode();
 
+  GraphNode *getNextNode();
   void add(GraphNode *node);
 };
