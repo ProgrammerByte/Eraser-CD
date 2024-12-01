@@ -1,5 +1,4 @@
-#ifndef CONSTRUCTION_ENVIRONMENT_H
-#define CONSTRUCTION_ENVIRONMENT_H
+#pragma once
 #include "break_node.h"
 #include "continue_node.h"
 #include "endif_node.h"
@@ -37,4 +36,3 @@ private:
   std::vector<std::vector<BreakNode *>> breakListStack;
   std::vector<GraphNode *> scopeStack;
 };
-#endif

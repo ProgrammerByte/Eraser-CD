@@ -8,9 +8,10 @@ public:
   int visits = 0;
 
   explicit GraphNode(NodeType type);
-  virtual ~GraphNode();
+  virtual ~GraphNode() = default;
 
-  void add(GraphNode *node){};
-  GraphNode *getNextNode() { return nullptr; }
-  std::string getPrintableName() { return "Stub"; };
+  virtual void add(GraphNode *node) = 0;
+  virtual GraphNode *getNextNode() = 0;
+  virtual std::string getPrintableName() = 0;
+  std::string getNodeType();
 };

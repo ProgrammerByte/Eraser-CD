@@ -4,8 +4,8 @@
 
 class WhileNode : public GraphNode {
 public:
-  GraphNode *whileNode;
-  EndwhileNode *endWhile;
+  GraphNode *whileNode = nullptr;
+  EndwhileNode *endWhile = nullptr;
   explicit WhileNode();
   virtual ~WhileNode();
   GraphNode *getNextNode();

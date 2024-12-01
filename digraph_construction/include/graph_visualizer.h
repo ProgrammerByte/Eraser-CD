@@ -1,5 +1,4 @@
-#ifndef CONSTRUCTION_ENVIRONMENT_H
-#define CONSTRUCTION_ENVIRONMENT_H
+#pragma once
 #include "break_node.h"
 #include "continue_node.h"
 #include "endif_node.h"
@@ -26,6 +25,6 @@ private:
       {};
   std::unordered_map<GraphNode *, std::string> nodeNames = {};
 
+  template <typename T> std::string pointerToString(T *ptr);
   void visitNode(GraphNode *node);
 };
-#endif

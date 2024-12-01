@@ -4,6 +4,7 @@
 #include "endif_node.h"
 #include "endwhile_node.h"
 #include "function_call_node.h"
+#include "graph_visualizer.h"
 #include "if_node.h"
 #include "lock_node.h"
 #include "read_node.h"
@@ -31,6 +32,7 @@ enum BranchType {
 };
 
 static unordered_map<string, StartNode *> funcMap = {};
+static vector<string> functions = {};
 static vector<unordered_map<string, VariableInfo>> scopeStack(0);
 static int inFunc = 0;
 static int scopeDepth = 0;
@@ -303,6 +305,7 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
   if (cursorKind == CXCursor_FunctionDecl) {
     ignoreNextCompound = false;
     inFunc = 0;
+    functions.push_back(funcName);
     funcMap.insert({funcName, startNode});
     startNode = nullptr;
   }
@@ -332,6 +335,8 @@ int main() {
 
   environment = new ConstructionEnvironment();
   clang_visitChildren(cursor, visitor, &isLhs);
+  GraphVisualizer *visualizer = new GraphVisualizer();
+  visualizer->visualizeGraph(funcMap[functions[0]]);
 
   clang_disposeTranslationUnit(unit);
   clang_disposeIndex(index);

@@ -3,7 +3,7 @@
 
 class BasicNode : public GraphNode {
 public:
-  GraphNode *next;
+  GraphNode *next = nullptr;
 
   explicit BasicNode(NodeType type);
   virtual ~BasicNode();

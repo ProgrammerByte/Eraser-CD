@@ -1,6 +1,27 @@
 #include "graph_visualizer.h"
 #include <fstream>
+#include <functional>
 #include <iostream>
+#include <sstream>
+
+template <typename T> std::string GraphVisualizer::pointerToString(T *ptr) {
+  if (ptr == nullptr) {
+    return "nullptr";
+  }
+
+  std::size_t hashValue = std::hash<T *>{}(ptr);
+
+  const char alphabet[] = "abcdefghijklmnopqrstuvwxyz";
+  const size_t alphabetSize = sizeof(alphabet) - 1;
+
+  std::string result;
+  while (hashValue > 0) {
+    result += alphabet[hashValue % alphabetSize];
+    hashValue /= alphabetSize;
+  }
+
+  return result;
+}
 
 void GraphVisualizer::visitNode(GraphNode *node) {
   if (node == nullptr) {
@@ -15,9 +36,9 @@ void GraphVisualizer::visitNode(GraphNode *node) {
   node->visits += 1;
   if (nextNode != nullptr) {
     adjacencyMatrix[node].push_back(nextNode);
+    visitNode(nextNode);
+    visitNode(node);
   }
-  visitNode(nextNode);
-  visitNode(node);
 }
 
 void GraphVisualizer::visualizeGraph(StartNode *node) {
@@ -31,11 +52,13 @@ void GraphVisualizer::visualizeGraph(StartNode *node) {
 
   file << "digraph G {\n";
   for (GraphNode *node : nodes) {
-    file << "  " << node << " [label=\"" << nodeNames[node] << "\"];\n";
+    file << "  " << pointerToString(node) << " [label=\"" << nodeNames[node]
+         << "\"];\n";
   }
   for (GraphNode *start : nodes) {
     for (GraphNode *end : adjacencyMatrix[start]) {
-      file << "  " << nodeNames[start] << " -> " << nodeNames[end] << ";\n";
+      file << "  " << pointerToString(start) << " -> " << pointerToString(end)
+           << ";\n";
     }
   }
   file << "}\n";
