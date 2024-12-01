@@ -4,4 +4,6 @@
 **Makefile
 **/CMakeFiles
 **.a
+**graph.dot
+**graph.png
 digraph_construction/digraph_construction
