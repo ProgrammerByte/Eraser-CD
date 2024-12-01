@@ -3,8 +3,11 @@
 
 class StartNode : public BasicNode {
 public:
-  explicit StartNode();
+  explicit StartNode(std::string funcName);
   virtual ~StartNode();
 
   std::string getPrintableName();
+
+private:
+  std::string funcName;
 };

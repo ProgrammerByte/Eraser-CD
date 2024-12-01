@@ -1,7 +1,7 @@
 #include "construction_environment.h"
 
-StartNode *ConstructionEnvironment::startNewTree() {
-  currNode = new StartNode();
+StartNode *ConstructionEnvironment::startNewTree(std::string funcName) {
+  currNode = new StartNode(funcName);
   return (StartNode *)currNode;
 };
 

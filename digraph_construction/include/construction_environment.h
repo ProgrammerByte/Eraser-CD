@@ -15,7 +15,7 @@ public:
   explicit ConstructionEnvironment() = default;
   virtual ~ConstructionEnvironment() = default;
 
-  StartNode *startNewTree();
+  StartNode *startNewTree(std::string funcName);
   void onAdd(GraphNode *node);
   void onAdd(IfNode *node);
   void onElseAdd();
