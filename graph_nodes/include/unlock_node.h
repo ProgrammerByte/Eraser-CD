@@ -4,8 +4,11 @@
 class UnlockNode : public BasicNode {
   // TODO - ADD UNLOCK INFO HERE!!!
 public:
-  explicit UnlockNode();
+  explicit UnlockNode(std::string varName);
   virtual ~UnlockNode();
 
   std::string getPrintableName();
+
+private:
+  std::string varName;
 };

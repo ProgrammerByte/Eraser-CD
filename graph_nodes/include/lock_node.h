@@ -4,8 +4,11 @@
 class LockNode : public BasicNode {
   // TODO - ADD LOCK INFO HERE!!!
 public:
-  explicit LockNode();
+  explicit LockNode(std::string varName);
   virtual ~LockNode();
 
   std::string getPrintableName();
+
+private:
+  std::string varName;
 };

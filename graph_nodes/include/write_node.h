@@ -3,8 +3,11 @@
 
 class WriteNode : public BasicNode {
 public:
-  explicit WriteNode();
+  explicit WriteNode(std::string varName);
   virtual ~WriteNode();
 
   std::string getPrintableName();
+
+private:
+  std::string varName;
 };

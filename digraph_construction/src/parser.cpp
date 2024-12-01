@@ -112,13 +112,14 @@ void handleFunctionCall(CXCursor cursor) {
               c,
               [](CXCursor inner, CXCursor parent, CXClientData clientData) {
                 if (clang_getCursorKind(inner) == CXCursor_DeclRefExpr) {
-                  string var = clang_getCString(clang_getCursorSpelling(inner));
+                  string varName =
+                      clang_getCString(clang_getCursorSpelling(inner));
                   string funcName = *(string *)clientData;
                   if (funcName == "pthread_mutex_lock") {
-                    environment->onAdd(
-                        new LockNode()); // TODO - LOCK / VARIABLE IDENTIFIERS
+                    environment->onAdd(new LockNode(
+                        varName)); // TODO - LOCK / VARIABLE IDENTIFIERS
                   } else if (funcName == "pthread_mutex_unlock") {
-                    environment->onAdd(new UnlockNode());
+                    environment->onAdd(new UnlockNode(varName));
                   }
                   cout << "pointer to " << clang_getCursorSpelling(inner)
                        << ", ";
@@ -201,9 +202,9 @@ void classifyVariable(CXCursor cursor, bool isWriteLhs) {
   }
 
   if (isWriteLhs) {
-    environment->onAdd(new WriteNode()); // TODO - VARIABLE INFO
+    environment->onAdd(new WriteNode(varName)); // TODO - VARIABLE INFO
   } else {
-    environment->onAdd(new ReadNode()); // TODO - VARIABLE INFO
+    environment->onAdd(new ReadNode(varName)); // TODO - VARIABLE INFO
   }
 
   string action = isWriteLhs ? "Written to " : "Read from ";
@@ -246,7 +247,7 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
     funcName = clang_getCString(clang_getCursorSpelling(cursor));
   } else if (cursorKind == CXCursor_CompoundStmt) {
     if (ignoreNextCompound) {
-      startNode = environment->startNewTree();
+      startNode = environment->startNewTree(funcName);
       ignoreNextCompound = false;
     } else {
       scopeDepth += 1;
