@@ -69,7 +69,8 @@ string getCursorFilename(CXCursor cursor) {
 bool isAssignmentOperator(CXCursor cursor) {
   CXCursorKind cursorKind = clang_getCursorKind(cursor);
   if (cursorKind != CXCursor_BinaryOperator &&
-      cursorKind != CXCursor_UnaryOperator) {
+      cursorKind != CXCursor_UnaryOperator &&
+      cursorKind != CXCursor_CompoundAssignOperator) {
     return false;
   }
 
