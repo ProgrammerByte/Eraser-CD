@@ -136,7 +136,7 @@ void handleFunctionCall(CXCursor cursor) {
   cout << endl;
 }
 
-void classifyVariable(CXCursor cursor, bool isWriteLhs) {
+void classifyVariable(CXCursor cursor, bool isWriteLhs, GraphNode **nodeToAdd) {
   CXString varNameObj = clang_getCursorSpelling(cursor);
   string varName = clang_getCString(varNameObj);
   clang_disposeString(varNameObj);
@@ -214,7 +214,7 @@ void classifyVariable(CXCursor cursor, bool isWriteLhs) {
   }
 
   if (isWriteLhs) {
-    environment->onAdd(new WriteNode(varName)); // TODO - VARIABLE INFO
+    *nodeToAdd = new WriteNode(varName); // TODO - VARIABLE INFO
   } else {
     environment->onAdd(new ReadNode(varName)); // TODO - VARIABLE INFO
   }
@@ -246,6 +246,7 @@ BranchType getBranchType(CXCursor cursor, CXCursor parent,
 struct VisitorData {
   unsigned int childIndex;
   bool *writeLhsPtr;
+  GraphNode *nodeToAdd;
 };
 
 CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
@@ -282,12 +283,11 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
   VisitorData *visitorData = reinterpret_cast<VisitorData *>(clientData);
   unsigned int childIndex = visitorData->childIndex;
   bool *writeLhsPtr = visitorData->writeLhsPtr;
-
   bool initialWriteLhs = *writeLhsPtr;
 
   if (cursorKind == CXCursor_VarDecl || cursorKind == CXCursor_DeclRefExpr ||
       cursorKind == CXCursor_ParmDecl) {
-    classifyVariable(cursor, initialWriteLhs);
+    classifyVariable(cursor, initialWriteLhs, &visitorData->nodeToAdd);
   }
 
   if (cursorKind == CXCursor_BreakStmt) {
@@ -310,8 +310,11 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
 
   // TODO - WHEN VISITING CHILDREN - APPEND NODES FROM THERE ONTO CURRENT BRANCH
   // NODE BRANCH_IF APPLICABLE
-  VisitorData childData = {0, writeLhsPtr};
+  VisitorData childData = {0, writeLhsPtr, nullptr};
   clang_visitChildren(cursor, visitor, &childData);
+  if (childData.nodeToAdd != nullptr) {
+    environment->onAdd(childData.nodeToAdd);
+  }
   if (cursorKind == CXCursor_IfStmt) {
     environment->onAdd(new EndifNode());
   } else if (branchType == BRANCH_WHILE) {
@@ -354,7 +357,7 @@ int main() {
   CXCursor cursor = clang_getTranslationUnitCursor(unit);
 
   bool isLhs = 0;
-  VisitorData initialData = {0, &isLhs};
+  VisitorData initialData = {0, &isLhs, nullptr};
 
   environment = new ConstructionEnvironment();
   clang_visitChildren(cursor, visitor, &initialData);
