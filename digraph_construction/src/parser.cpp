@@ -329,6 +329,7 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
   if (cursorKind == CXCursor_FunctionDecl) {
     ignoreNextCompound = false;
     inFunc = 0;
+    environment->onAdd(new ReturnNode());
     functions.push_back(funcName);
     funcMap.insert({funcName, startNode});
     startNode = nullptr;
