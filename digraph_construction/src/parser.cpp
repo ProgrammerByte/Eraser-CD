@@ -294,8 +294,6 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
     environment->onAdd(new BreakNode());
   } else if (cursorKind == CXCursor_ContinueStmt) {
     environment->onAdd(new ContinueNode());
-  } else if (cursorKind == CXCursor_ReturnStmt) {
-    environment->onAdd(new ReturnNode());
   } else if (!initialWriteLhs && isAssignmentOperator(cursor)) {
     *writeLhsPtr = true;
   }
@@ -318,6 +316,8 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
     environment->onAdd(new EndifNode());
   } else if (branchType == BRANCH_WHILE) {
     environment->onAdd(new EndwhileNode());
+  } else if (cursorKind == CXCursor_ReturnStmt) {
+    environment->onAdd(new ReturnNode());
   }
   if (cursorKind == CXCursor_CompoundStmt) {
     scopeStack.pop_back();
