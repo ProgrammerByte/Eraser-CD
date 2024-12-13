@@ -211,23 +211,30 @@ void classifyVariable(CXCursor cursor, bool isWriteLhs) {
   cout << action << staticType << variableType << varName << location << endl;
 }
 
-BranchType getBranchType(CXCursor cursor, CXCursor parent) {
+BranchType getBranchType(CXCursor cursor, CXCursor parent,
+                         unsigned int childIndex) {
   CXCursorKind cursorKind = clang_getCursorKind(cursor);
   CXCursorKind parentKind = clang_getCursorKind(parent);
-  if (cursorKind == CXCursor_IfStmt) {
-    return BRANCH_IF;
-  } else if (parentKind == CXCursor_IfStmt &&
-             cursorKind == CXCursor_CompoundStmt) {
-    CXCursor child = clang_getCursorReferenced(cursor);
-    if (clang_getCursorKind(child) == CXCursor_IfStmt) {
+  if (parentKind == CXCursor_IfStmt) {
+    if (cursorKind == CXCursor_CompoundStmt) {
+      if (childIndex == 1) {
+        return BRANCH_IF;
+      } else if (childIndex == 2) {
+        return BRANCH_ELSE;
+      }
+    } else if (cursorKind == CXCursor_IfStmt) {
       return BRANCH_ELSE_IF;
     }
-    return BRANCH_ELSE;
   } else if (cursorKind == CXCursor_WhileStmt) {
     return BRANCH_WHILE;
   }
   return BRANCH_NONE;
 }
+
+struct VisitorData {
+  unsigned int childIndex;
+  bool *writeLhsPtr;
+};
 
 CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
                            CXClientData clientData) {
@@ -260,7 +267,10 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
     return CXChildVisit_Recurse;
   }
 
-  bool *writeLhsPtr = reinterpret_cast<bool *>(clientData);
+  VisitorData *visitorData = reinterpret_cast<VisitorData *>(clientData);
+  unsigned int childIndex = visitorData->childIndex;
+  bool *writeLhsPtr = visitorData->writeLhsPtr;
+
   bool initialWriteLhs = *writeLhsPtr;
 
   if (cursorKind == CXCursor_VarDecl || cursorKind == CXCursor_DeclRefExpr ||
@@ -278,7 +288,7 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
     *writeLhsPtr = true;
   }
 
-  BranchType branchType = getBranchType(cursor, parent);
+  BranchType branchType = getBranchType(cursor, parent, childIndex);
 
   if (branchType == BRANCH_IF) {
     environment->onAdd(new IfNode());
@@ -293,8 +303,9 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
 
   // TODO - WHEN VISITING CHILDREN - APPEND NODES FROM THERE ONTO CURRENT BRANCH
   // NODE BRANCH_IF APPLICABLE
-  clang_visitChildren(cursor, visitor, writeLhsPtr);
-  if (branchType == BRANCH_IF) {
+  VisitorData childData = {0, writeLhsPtr};
+  clang_visitChildren(cursor, visitor, &childData);
+  if (cursorKind == CXCursor_IfStmt) {
     environment->onAdd(new EndifNode());
   } else if (branchType == BRANCH_WHILE) {
     environment->onAdd(new EndwhileNode());
@@ -314,6 +325,7 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
     *writeLhsPtr = false;
   }
 
+  visitorData->childIndex += 1;
   return CXChildVisit_Continue;
 }
 
@@ -333,9 +345,10 @@ int main() {
   CXCursor cursor = clang_getTranslationUnitCursor(unit);
 
   bool isLhs = 0;
+  VisitorData initialData = {0, &isLhs};
 
   environment = new ConstructionEnvironment();
-  clang_visitChildren(cursor, visitor, &isLhs);
+  clang_visitChildren(cursor, visitor, &initialData);
   GraphVisualizer *visualizer = new GraphVisualizer();
   visualizer->visualizeGraph(funcMap[functions[0]]);
 
