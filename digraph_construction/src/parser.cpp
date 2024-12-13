@@ -142,6 +142,18 @@ void classifyVariable(CXCursor cursor, bool isWriteLhs) {
   clang_disposeString(varNameObj);
 
   CXCursorKind cursorKind = clang_getCursorKind(cursor);
+  CXType cursorType = clang_getCursorType(cursor);
+
+  if (cursorKind == CXCursor_DeclRefExpr &&
+      cursorType.kind == CXType_FunctionProto) {
+    return;
+  }
+  CXString typeSpelling = clang_getTypeSpelling(cursorType);
+  if (std::string(clang_getCString(typeSpelling)) == "pthread_mutex_t") {
+    clang_disposeString(typeSpelling);
+    return;
+  }
+  clang_disposeString(typeSpelling);
 
   struct VariableInfo variableInfo;
   bool infoFound = false;
