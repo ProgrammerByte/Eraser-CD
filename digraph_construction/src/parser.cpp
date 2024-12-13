@@ -292,10 +292,7 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
 
   if (branchType == BRANCH_IF) {
     environment->onAdd(new IfNode());
-  } else if (branchType == BRANCH_ELSE_IF) {
-    environment->onElseAdd();
-    environment->onAdd(new IfNode());
-  } else if (branchType == BRANCH_ELSE) {
+  } else if (branchType == BRANCH_ELSE_IF || branchType == BRANCH_ELSE) {
     environment->onElseAdd();
   } else if (branchType == BRANCH_WHILE) {
     environment->onAdd(new WhileNode());
