@@ -103,6 +103,12 @@ void handleFunctionCall(CXCursor cursor) {
   string funcName = clang_getCString(clang_getCursorSpelling(cursor));
   cout << "Function call to '" << funcName << "' Arguments: ";
 
+  if (funcName != "pthread_mutex_lock" && funcName != "pthread_mutex_unlock") {
+    environment->onAdd(new FunctionCallNode(funcName));
+    cout << endl;
+    return;
+  }
+
   clang_visitChildren(
       cursor,
       [](CXCursor c, CXCursor parent, CXClientData clientData) {
