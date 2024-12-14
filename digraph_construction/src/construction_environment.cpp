@@ -53,6 +53,11 @@ void ConstructionEnvironment::onAdd(EndifNode *node) {
   // TODO - THIS REQUIRES SOME THOUGHT!!!
 }
 
+void ConstructionEnvironment::onAdd(StartwhileNode *node) {
+  startwhileStack.push_back(node);
+  callOnAdd(node);
+}
+
 void ConstructionEnvironment::onAdd(WhileNode *node) {
   whileStack.push_back(node);
   scopeStack.push_back(node);
@@ -66,6 +71,7 @@ void ConstructionEnvironment::onAdd(EndwhileNode *node) {
   breakListStack.pop_back();
   scopeStack.pop_back();
   whileStack.pop_back();
+  startwhileStack.pop_back();
 
   for (int i = 0; i < breakNodes.size(); i++) {
     breakNodes[i]->next = node;
@@ -88,7 +94,7 @@ void ConstructionEnvironment::onAdd(BreakNode *node) {
 
 void ConstructionEnvironment::onAdd(ContinueNode *node) {
   callOnAdd(node);
-  node->next = whileStack.back();
+  node->next = startwhileStack.back();
   currNode = nullptr;
 }
 

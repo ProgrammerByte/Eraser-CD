@@ -6,6 +6,7 @@
 #include "if_node.h"
 #include "return_node.h"
 #include "start_node.h"
+#include "startwhile_node.h"
 #include "while_node.h"
 #include <memory>
 #include <vector>
@@ -20,6 +21,7 @@ public:
   void onAdd(IfNode *node);
   void onElseAdd();
   void onAdd(EndifNode *node);
+  void onAdd(StartwhileNode *node);
   void onAdd(WhileNode *node);
   void onAdd(EndwhileNode *node);
   void onAdd(BreakNode *node);
@@ -33,6 +35,7 @@ private:
   std::vector<IfNode *> ifStack;
   std::vector<std::vector<BasicNode *>> endifListStack;
   std::vector<WhileNode *> whileStack;
+  std::vector<StartwhileNode *> startwhileStack;
   std::vector<std::vector<BreakNode *>> breakListStack;
   std::vector<GraphNode *> scopeStack;
 };

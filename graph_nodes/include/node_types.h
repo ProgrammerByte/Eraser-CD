@@ -7,6 +7,7 @@ enum NodeType {
   READ,
   WRITE,
   FUNCTION_CALL,
+  STARTWHILE,
   WHILE,
   ENDWHILE,
   BREAK,

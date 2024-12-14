@@ -46,5 +46,8 @@
         "typeinfo": "cpp",
         "fstream": "cpp",
         "sstream": "cpp"
-    }
+    },
+    "cSpell.words": [
+        "STARTWHILE"
+    ]
 }

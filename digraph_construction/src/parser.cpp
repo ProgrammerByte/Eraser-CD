@@ -10,6 +10,7 @@
 #include "read_node.h"
 #include "return_node.h"
 #include "start_node.h"
+#include "startwhile_node.h"
 #include "unlock_node.h"
 #include "write_node.h"
 #include <clang-c/Index.h>
@@ -28,6 +29,7 @@ enum BranchType {
   BRANCH_IF,
   BRANCH_ELSE_IF,
   BRANCH_ELSE,
+  BRANCH_STARTWHILE,
   BRANCH_WHILE
 };
 
@@ -238,8 +240,12 @@ BranchType getBranchType(CXCursor cursor, CXCursor parent,
     } else if (cursorKind == CXCursor_IfStmt) {
       return BRANCH_ELSE_IF;
     }
-  } else if (cursorKind == CXCursor_WhileStmt) {
-    return BRANCH_WHILE;
+  } else if (parentKind == CXCursor_WhileStmt) {
+    if (childIndex == 0) {
+      return BRANCH_STARTWHILE;
+    } else if (childIndex == 1) {
+      return BRANCH_WHILE;
+    }
   }
   return BRANCH_NONE;
 }
@@ -305,6 +311,8 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
     environment->onAdd(new IfNode());
   } else if (branchType == BRANCH_ELSE_IF || branchType == BRANCH_ELSE) {
     environment->onElseAdd();
+  } else if (branchType == BRANCH_STARTWHILE) {
+    environment->onAdd(new StartwhileNode());
   } else if (branchType == BRANCH_WHILE) {
     environment->onAdd(new WhileNode());
   }
