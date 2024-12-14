@@ -327,6 +327,7 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
   if (cursorKind == CXCursor_IfStmt) {
     environment->onAdd(new EndifNode());
   } else if (branchType == BRANCH_WHILE) {
+    environment->onAdd(new ContinueNode());
     environment->onAdd(new EndwhileNode());
   } else if (cursorKind == CXCursor_ReturnStmt) {
     environment->onAdd(new ReturnNode());
