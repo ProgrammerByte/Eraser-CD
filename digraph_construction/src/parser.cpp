@@ -21,7 +21,8 @@ using namespace std;
 
 struct VariableInfo {
   int scopeDepth; // Depth of the scope (0 for global, etc.)
-  bool isStatic;  // True if the variable is static, false otherwise
+  int scopeNum;
+  bool isStatic; // True if the variable is static, false otherwise
 };
 
 enum BranchType {
@@ -33,9 +34,11 @@ enum BranchType {
   BRANCH_WHILE
 };
 
-static unordered_map<string, StartNode *> funcMap = {};
+static unordered_map<string, StartNode *> funcCfgs = {};
+static unordered_map<string, bool> funcMap = {};
 static vector<string> functions = {};
-static vector<unordered_map<string, VariableInfo>> scopeStack(0);
+static vector<unordered_map<string, VariableInfo>> scopeStack = {};
+static vector<unsigned int> scopeNums = {0};
 static int inFunc = 0;
 static int scopeDepth = 0;
 static bool ignoreNextCompound = false;
@@ -99,11 +102,31 @@ bool isAssignmentOperator(CXCursor cursor) {
   return false;
 }
 
+VariableInfo findVariableInfo(string varName) {
+  for (int i = scopeDepth; i >= 0; i--) {
+    auto t = scopeStack[i].find(varName);
+    if (t != scopeStack[i].end()) {
+      return t->second;
+    }
+  }
+  struct VariableInfo variableInfo;
+  variableInfo.scopeDepth = 0;
+  variableInfo.scopeNum = 0;
+  variableInfo.isStatic = false;
+  scopeStack[0].insert({varName, variableInfo});
+  return variableInfo;
+}
+
 void handleFunctionCall(CXCursor cursor) {
   string funcName = clang_getCString(clang_getCursorSpelling(cursor));
   cout << "Function call to '" << funcName << "' Arguments: ";
 
   if (funcName != "pthread_mutex_lock" && funcName != "pthread_mutex_unlock") {
+    auto func = funcMap.find(funcName);
+    if (func != funcMap.end() && func->second) {
+      string fileName = getCursorFilename(cursor);
+      funcName = fileName + " " + funcName;
+    }
     environment->onAdd(new FunctionCallNode(funcName));
     cout << endl;
     return;
@@ -123,10 +146,16 @@ void handleFunctionCall(CXCursor cursor) {
                 if (clang_getCursorKind(inner) == CXCursor_DeclRefExpr) {
                   string varName =
                       clang_getCString(clang_getCursorSpelling(inner));
+                  struct VariableInfo variableInfo = findVariableInfo(varName);
+                  if (variableInfo.isStatic) {
+                    string fileName = getCursorFilename(inner);
+                    varName = fileName + " " +
+                              to_string(variableInfo.scopeDepth) + " " +
+                              to_string(variableInfo.scopeNum) + " " + varName;
+                  }
                   string funcName = *(string *)clientData;
                   if (funcName == "pthread_mutex_lock") {
-                    environment->onAdd(new LockNode(
-                        varName)); // TODO - LOCK / VARIABLE IDENTIFIERS
+                    environment->onAdd(new LockNode(varName));
                   } else if (funcName == "pthread_mutex_unlock") {
                     environment->onAdd(new UnlockNode(varName));
                   }
@@ -157,12 +186,6 @@ void classifyVariable(CXCursor cursor, bool isWriteLhs, GraphNode **nodeToAdd) {
       cursorType.kind == CXType_FunctionProto) {
     return;
   }
-  CXString typeSpelling = clang_getTypeSpelling(cursorType);
-  if (std::string(clang_getCString(typeSpelling)) == "pthread_mutex_t") {
-    clang_disposeString(typeSpelling);
-    return;
-  }
-  clang_disposeString(typeSpelling);
 
   struct VariableInfo variableInfo;
   bool infoFound = false;
@@ -174,30 +197,23 @@ void classifyVariable(CXCursor cursor, bool isWriteLhs, GraphNode **nodeToAdd) {
     variableInfo.isStatic =
         clang_Cursor_getStorageClass(cursor) == CX_SC_Static;
     variableInfo.scopeDepth = scopeDepth;
+    variableInfo.scopeNum = scopeNums[scopeDepth];
     if (scopeDepth == 0 && !variableInfo.isStatic) {
       return;
     }
     scopeStack[scopeDepth].insert({varName, variableInfo});
   } else {
-    for (int i = scopeDepth; i >= 0; i--) {
-      auto t = scopeStack[i].find(varName);
-      if (t != scopeStack[i].end()) {
-        infoFound = true;
-        variableInfo = t->second;
-        break;
-      }
-    }
+    variableInfo = findVariableInfo(varName);
   }
-  // TODO - MAYBE NOT NEEDED? If not found then assume global and defined
-  // elsewhere
-  if (!infoFound) {
-    variableInfo.scopeDepth = 0;
-    variableInfo.isStatic = false;
-    scopeStack[0].insert({varName, variableInfo});
+  CXString typeSpelling = clang_getTypeSpelling(cursorType);
+  if (std::string(clang_getCString(typeSpelling)) == "pthread_mutex_t") {
+    clang_disposeString(typeSpelling);
+    return;
   }
+  clang_disposeString(typeSpelling);
+
   bool global = variableInfo.scopeDepth == 0;
-  bool isStatic = variableInfo.isStatic;
-  string staticType = isStatic ? "static " : "";
+  string staticType = variableInfo.isStatic ? "static " : "";
   string variableType = global ? "global variable " : "local variable ";
   string location = " from " + getCursorFilename(cursor) +
                     " at line X with scope depth " + to_string(scopeDepth);
@@ -220,6 +236,12 @@ void classifyVariable(CXCursor cursor, bool isWriteLhs, GraphNode **nodeToAdd) {
   if (cursorKind == CXCursor_ParmDecl) {
     cout << "Declared parameter " << varName << endl;
     return;
+  }
+
+  if (variableInfo.isStatic) {
+    std::string fileName = getCursorFilename(cursor);
+    varName = fileName + " " + to_string(variableInfo.scopeDepth) + " " +
+              to_string(variableInfo.scopeNum) + " " + varName;
   }
 
   if (isWriteLhs) {
@@ -262,6 +284,16 @@ struct VisitorData {
   GraphNode *nodeToAdd;
 };
 
+void onNewScope() {
+  scopeDepth += 1;
+  scopeStack.push_back(unordered_map<string, VariableInfo>());
+  if (scopeDepth >= scopeNums.size()) {
+    scopeNums.push_back(0);
+  } else {
+    scopeNums[scopeDepth] += 1;
+  }
+}
+
 CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
                            CXClientData clientData) {
   // TODO - REMOVE THIS IF STATEMENT IN A BIT!!!
@@ -274,17 +306,21 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
 
   if (cursorKind == CXCursor_FunctionDecl) {
     ignoreNextCompound = true;
-    scopeDepth += 1;
-    scopeStack.push_back(unordered_map<string, VariableInfo>());
+    onNewScope();
     inFunc = 1;
     funcName = clang_getCString(clang_getCursorSpelling(cursor));
+    bool isStatic = clang_Cursor_getStorageClass(cursor) == CX_SC_Static;
+    funcMap.insert({funcName, isStatic});
+    if (isStatic) {
+      std::string fileName = getCursorFilename(cursor);
+      funcName = fileName + " " + funcName;
+    }
   } else if (cursorKind == CXCursor_CompoundStmt) {
     if (ignoreNextCompound) {
       startNode = environment->startNewTree(funcName);
       ignoreNextCompound = false;
     } else {
-      scopeDepth += 1;
-      scopeStack.push_back(unordered_map<string, VariableInfo>());
+      onNewScope();
     }
   }
 
@@ -347,7 +383,7 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
     inFunc = 0;
     environment->onAdd(new ReturnNode());
     functions.push_back(funcName);
-    funcMap.insert({funcName, startNode});
+    funcCfgs.insert({funcName, startNode});
     startNode = nullptr;
   }
   if (initialWriteLhs) {
@@ -379,7 +415,7 @@ int main() {
   environment = new ConstructionEnvironment();
   clang_visitChildren(cursor, visitor, &initialData);
   GraphVisualizer *visualizer = new GraphVisualizer();
-  visualizer->visualizeGraph(funcMap[functions[0]]);
+  visualizer->visualizeGraph(funcCfgs[functions[1]]);
 
   clang_disposeTranslationUnit(unit);
   clang_disposeIndex(index);
