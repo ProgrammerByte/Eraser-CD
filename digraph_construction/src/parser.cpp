@@ -205,6 +205,9 @@ void classifyVariable(CXCursor cursor, bool isWriteLhs, GraphNode **nodeToAdd) {
   } else {
     variableInfo = findVariableInfo(varName);
   }
+  if (!variableInfo.isStatic && variableInfo.scopeDepth > 0) {
+    return;
+  }
   CXString typeSpelling = clang_getTypeSpelling(cursorType);
   if (std::string(clang_getCString(typeSpelling)) == "pthread_mutex_t") {
     clang_disposeString(typeSpelling);
