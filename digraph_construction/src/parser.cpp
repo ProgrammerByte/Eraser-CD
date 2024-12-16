@@ -34,6 +34,8 @@ enum BranchType {
   BRANCH_WHILE
 };
 
+enum LhsType { LHS_NONE, LHS_WRITE, LHS_READ_AND_WRITE };
+
 static unordered_map<string, StartNode *> funcCfgs = {};
 static unordered_map<string, bool> funcMap = {};
 static vector<string> functions = {};
@@ -57,7 +59,7 @@ string getCursorFilename(CXCursor cursor) {
   CXSourceLocation location = clang_getCursorLocation(cursor);
 
   CXFile file;
-  unsigned line, column, offset; // TODO - USE LINE NUMBER FROM HERE IN MESSAGES
+  unsigned line, column, offset;
   clang_getFileLocation(location, &file, &line, &column, &offset);
 
   if (file == nullptr) {
@@ -71,12 +73,12 @@ string getCursorFilename(CXCursor cursor) {
   return result;
 }
 
-bool isAssignmentOperator(CXCursor cursor) {
+LhsType assignmentOperatorType(CXCursor cursor) {
   CXCursorKind cursorKind = clang_getCursorKind(cursor);
   if (cursorKind != CXCursor_BinaryOperator &&
       cursorKind != CXCursor_UnaryOperator &&
       cursorKind != CXCursor_CompoundAssignOperator) {
-    return false;
+    return LHS_NONE;
   }
 
   CXToken *tokens;
@@ -88,18 +90,22 @@ bool isAssignmentOperator(CXCursor cursor) {
     CXString tokenSpelling = clang_getTokenSpelling(tu, tokens[i]);
     string token = clang_getCString(tokenSpelling);
 
-    if (token == "=" || token == "+=" || token == "-=" || token == "*=" ||
-        token == "/=" || token == "++" || token == "--") {
+    if (token == "=") {
       clang_disposeString(tokenSpelling);
       clang_disposeTokens(tu, tokens, numTokens);
-      return true;
+      return LHS_WRITE;
+    } else if (token == "+=" || token == "-=" || token == "*=" ||
+               token == "/=" || token == "++" || token == "--") {
+      clang_disposeString(tokenSpelling);
+      clang_disposeTokens(tu, tokens, numTokens);
+      return LHS_READ_AND_WRITE;
     }
 
     clang_disposeString(tokenSpelling);
   }
 
   clang_disposeTokens(tu, tokens, numTokens);
-  return false;
+  return LHS_NONE;
 }
 
 VariableInfo findVariableInfo(string varName) {
@@ -119,7 +125,6 @@ VariableInfo findVariableInfo(string varName) {
 
 void handleFunctionCall(CXCursor cursor) {
   string funcName = clang_getCString(clang_getCursorSpelling(cursor));
-  cout << "Function call to '" << funcName << "' Arguments: ";
 
   if (funcName != "pthread_mutex_lock" && funcName != "pthread_mutex_unlock") {
     auto func = funcMap.find(funcName);
@@ -128,7 +133,6 @@ void handleFunctionCall(CXCursor cursor) {
       funcName = fileName + " " + funcName;
     }
     environment->onAdd(new FunctionCallNode(funcName));
-    cout << endl;
     return;
   }
 
@@ -136,9 +140,7 @@ void handleFunctionCall(CXCursor cursor) {
       cursor,
       [](CXCursor c, CXCursor parent, CXClientData clientData) {
         CXCursorKind cursorKind = clang_getCursorKind(c);
-        if (cursorKind == CXCursor_DeclRefExpr) {
-          cout << "variable " << clang_getCursorSpelling(c) << ", ";
-        } else if (clang_getCursorKind(c) == CXCursor_UnaryOperator) {
+        if (clang_getCursorKind(c) == CXCursor_UnaryOperator) {
           // when & is used
           clang_visitChildren(
               c,
@@ -159,8 +161,6 @@ void handleFunctionCall(CXCursor cursor) {
                   } else if (funcName == "pthread_mutex_unlock") {
                     environment->onAdd(new UnlockNode(varName));
                   }
-                  cout << "pointer to " << clang_getCursorSpelling(inner)
-                       << ", ";
                 }
                 return CXChildVisit_Break;
               },
@@ -171,10 +171,10 @@ void handleFunctionCall(CXCursor cursor) {
         return CXChildVisit_Continue;
       },
       &funcName);
-  cout << endl;
 }
 
-void classifyVariable(CXCursor cursor, bool isWriteLhs, GraphNode **nodeToAdd) {
+void classifyVariable(CXCursor cursor, LhsType lhsType,
+                      vector<GraphNode *> *nodesToAdd) {
   CXString varNameObj = clang_getCursorSpelling(cursor);
   string varName = clang_getCString(varNameObj);
   clang_disposeString(varNameObj);
@@ -198,10 +198,8 @@ void classifyVariable(CXCursor cursor, bool isWriteLhs, GraphNode **nodeToAdd) {
         clang_Cursor_getStorageClass(cursor) == CX_SC_Static;
     variableInfo.scopeDepth = scopeDepth;
     variableInfo.scopeNum = scopeNums[scopeDepth];
-    if (scopeDepth == 0 && !variableInfo.isStatic) {
-      return;
-    }
     scopeStack[scopeDepth].insert({varName, variableInfo});
+    return;
   } else {
     variableInfo = findVariableInfo(varName);
   }
@@ -209,52 +207,28 @@ void classifyVariable(CXCursor cursor, bool isWriteLhs, GraphNode **nodeToAdd) {
     return;
   }
   CXString typeSpelling = clang_getTypeSpelling(cursorType);
-  if (std::string(clang_getCString(typeSpelling)) == "pthread_mutex_t") {
+  if (string(clang_getCString(typeSpelling)) == "pthread_mutex_t") {
     clang_disposeString(typeSpelling);
     return;
   }
   clang_disposeString(typeSpelling);
 
   bool global = variableInfo.scopeDepth == 0;
-  string staticType = variableInfo.isStatic ? "static " : "";
-  string variableType = global ? "global variable " : "local variable ";
-  string location = " from " + getCursorFilename(cursor) +
-                    " at line X with scope depth " + to_string(scopeDepth);
-
-  if (cursorKind == CXCursor_VarDecl) {
-    bool hasChild = false;
-    clang_visitChildren(
-        cursor,
-        [](CXCursor c, CXCursor parent, CXClientData clientData) {
-          bool *hasChild = reinterpret_cast<bool *>(clientData);
-          *hasChild = true;
-          return CXChildVisit_Break;
-        },
-        &hasChild);
-    string action = hasChild ? "Declared and written to " : "Declared ";
-    cout << action << staticType << variableType << varName << location << endl;
-    return;
-  }
-
-  if (cursorKind == CXCursor_ParmDecl) {
-    cout << "Declared parameter " << varName << endl;
-    return;
-  }
 
   if (variableInfo.isStatic) {
-    std::string fileName = getCursorFilename(cursor);
+    string fileName = getCursorFilename(cursor);
     varName = fileName + " " + to_string(variableInfo.scopeDepth) + " " +
               to_string(variableInfo.scopeNum) + " " + varName;
   }
 
-  if (isWriteLhs) {
-    *nodeToAdd = new WriteNode(varName); // TODO - VARIABLE INFO
+  if (lhsType == LHS_WRITE) {
+    (*nodesToAdd).push_back(new WriteNode(varName));
+  } else if (lhsType == LHS_READ_AND_WRITE) {
+    (*nodesToAdd).push_back(new ReadNode(varName));
+    (*nodesToAdd).push_back(new WriteNode(varName));
   } else {
-    environment->onAdd(new ReadNode(varName)); // TODO - VARIABLE INFO
+    environment->onAdd(new ReadNode(varName));
   }
-
-  string action = isWriteLhs ? "Written to " : "Read from ";
-  cout << action << staticType << variableType << varName << location << endl;
 }
 
 BranchType getBranchType(CXCursor cursor, CXCursor parent,
@@ -283,8 +257,8 @@ BranchType getBranchType(CXCursor cursor, CXCursor parent,
 
 struct VisitorData {
   unsigned int childIndex;
-  bool *writeLhsPtr;
-  GraphNode *nodeToAdd;
+  LhsType *lhsTypePtr;
+  vector<GraphNode *> nodesToAdd;
 };
 
 void onNewScope() {
@@ -315,7 +289,7 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
     bool isStatic = clang_Cursor_getStorageClass(cursor) == CX_SC_Static;
     funcMap.insert({funcName, isStatic});
     if (isStatic) {
-      std::string fileName = getCursorFilename(cursor);
+      string fileName = getCursorFilename(cursor);
       funcName = fileName + " " + funcName;
     }
   } else if (cursorKind == CXCursor_CompoundStmt) {
@@ -334,20 +308,22 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
 
   VisitorData *visitorData = reinterpret_cast<VisitorData *>(clientData);
   unsigned int childIndex = visitorData->childIndex;
-  bool *writeLhsPtr = visitorData->writeLhsPtr;
-  bool initialWriteLhs = *writeLhsPtr;
+  LhsType *lhsTypePtr = visitorData->lhsTypePtr;
+  LhsType initialLhsType = *lhsTypePtr;
 
   if (cursorKind == CXCursor_VarDecl || cursorKind == CXCursor_DeclRefExpr ||
       cursorKind == CXCursor_ParmDecl) {
-    classifyVariable(cursor, initialWriteLhs, &visitorData->nodeToAdd);
+    classifyVariable(cursor, initialLhsType, &visitorData->nodesToAdd);
   }
+
+  LhsType cursorLhsType = assignmentOperatorType(cursor);
 
   if (cursorKind == CXCursor_BreakStmt) {
     environment->onAdd(new BreakNode());
   } else if (cursorKind == CXCursor_ContinueStmt) {
     environment->onAdd(new ContinueNode());
-  } else if (!initialWriteLhs && isAssignmentOperator(cursor)) {
-    *writeLhsPtr = true;
+  } else if (initialLhsType == LHS_NONE && cursorLhsType != LHS_NONE) {
+    *lhsTypePtr = cursorLhsType;
   }
 
   BranchType branchType = getBranchType(cursor, parent, childIndex);
@@ -362,12 +338,10 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
     environment->onAdd(new WhileNode());
   }
 
-  // TODO - WHEN VISITING CHILDREN - APPEND NODES FROM THERE ONTO CURRENT BRANCH
-  // NODE BRANCH_IF APPLICABLE
-  VisitorData childData = {0, writeLhsPtr, nullptr};
+  VisitorData childData = {0, lhsTypePtr, {}};
   clang_visitChildren(cursor, visitor, &childData);
-  if (childData.nodeToAdd != nullptr) {
-    environment->onAdd(childData.nodeToAdd);
+  for (int i = 0; i < childData.nodesToAdd.size(); i++) {
+    environment->onAdd(childData.nodesToAdd[i]);
   }
   if (cursorKind == CXCursor_IfStmt) {
     environment->onAdd(new EndifNode());
@@ -389,8 +363,8 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
     funcCfgs.insert({funcName, startNode});
     startNode = nullptr;
   }
-  if (initialWriteLhs) {
-    *writeLhsPtr = false;
+  if (initialLhsType) {
+    *lhsTypePtr = LHS_NONE;
   }
 
   visitorData->childIndex += 1;
@@ -412,8 +386,8 @@ int main() {
 
   CXCursor cursor = clang_getTranslationUnitCursor(unit);
 
-  bool isLhs = 0;
-  VisitorData initialData = {0, &isLhs, nullptr};
+  LhsType lhsType = LHS_NONE;
+  VisitorData initialData = {0, &lhsType, {}};
 
   environment = new ConstructionEnvironment();
   clang_visitChildren(cursor, visitor, &initialData);
