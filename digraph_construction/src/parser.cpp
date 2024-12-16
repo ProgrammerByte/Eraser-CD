@@ -123,7 +123,7 @@ VariableInfo findVariableInfo(string varName) {
   return variableInfo;
 }
 
-void handleFunctionCall(CXCursor cursor) {
+void handleFunctionCall(CXCursor cursor, vector<GraphNode *> *nodesToAdd) {
   string funcName = clang_getCString(clang_getCursorSpelling(cursor));
 
   if (funcName != "pthread_mutex_lock" && funcName != "pthread_mutex_unlock") {
@@ -132,7 +132,7 @@ void handleFunctionCall(CXCursor cursor) {
       string fileName = getCursorFilename(cursor);
       funcName = fileName + " " + funcName;
     }
-    environment->onAdd(new FunctionCallNode(funcName));
+    (*nodesToAdd).push_back(new FunctionCallNode(funcName));
     return;
   }
 
@@ -301,29 +301,27 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
     }
   }
 
-  if (cursorKind == CXCursor_CallExpr) {
-    handleFunctionCall(cursor);
-    return CXChildVisit_Recurse;
-  }
-
   VisitorData *visitorData = reinterpret_cast<VisitorData *>(clientData);
   unsigned int childIndex = visitorData->childIndex;
   LhsType *lhsTypePtr = visitorData->lhsTypePtr;
   LhsType initialLhsType = *lhsTypePtr;
 
-  if (cursorKind == CXCursor_VarDecl || cursorKind == CXCursor_DeclRefExpr ||
-      cursorKind == CXCursor_ParmDecl) {
+  VisitorData childData = {0, lhsTypePtr, {}};
+  if (cursorKind == CXCursor_CallExpr) {
+    handleFunctionCall(cursor, &childData.nodesToAdd);
+  } else if (cursorKind == CXCursor_VarDecl ||
+             cursorKind == CXCursor_DeclRefExpr ||
+             cursorKind == CXCursor_ParmDecl) {
     classifyVariable(cursor, initialLhsType, &visitorData->nodesToAdd);
-  }
-
-  LhsType cursorLhsType = assignmentOperatorType(cursor);
-
-  if (cursorKind == CXCursor_BreakStmt) {
+  } else if (cursorKind == CXCursor_BreakStmt) {
     environment->onAdd(new BreakNode());
   } else if (cursorKind == CXCursor_ContinueStmt) {
     environment->onAdd(new ContinueNode());
-  } else if (initialLhsType == LHS_NONE && cursorLhsType != LHS_NONE) {
-    *lhsTypePtr = cursorLhsType;
+  } else if (initialLhsType == LHS_NONE) {
+    LhsType cursorLhsType = assignmentOperatorType(cursor);
+    if (cursorLhsType != LHS_NONE) {
+      *lhsTypePtr = cursorLhsType;
+    }
   }
 
   BranchType branchType = getBranchType(cursor, parent, childIndex);
@@ -338,7 +336,6 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
     environment->onAdd(new WhileNode());
   }
 
-  VisitorData childData = {0, lhsTypePtr, {}};
   clang_visitChildren(cursor, visitor, &childData);
   for (int i = 0; i < childData.nodesToAdd.size(); i++) {
     environment->onAdd(childData.nodesToAdd[i]);
