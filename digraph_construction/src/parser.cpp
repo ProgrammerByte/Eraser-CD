@@ -74,39 +74,41 @@ string getCursorFilename(CXCursor cursor) {
   return result;
 }
 
-LhsType assignmentOperatorType(CXCursor cursor) {
-  CXCursorKind cursorKind = clang_getCursorKind(cursor);
-  if (cursorKind != CXCursor_BinaryOperator &&
-      cursorKind != CXCursor_UnaryOperator &&
-      cursorKind != CXCursor_CompoundAssignOperator) {
+LhsType assignmentOperatorType(CXCursor parent, unsigned int childIndex) {
+  if (childIndex != 0) {
     return LHS_NONE;
   }
 
-  CXToken *tokens;
-  unsigned int numTokens;
-  CXTranslationUnit tu = clang_Cursor_getTranslationUnit(cursor);
-  clang_tokenize(tu, clang_getCursorExtent(cursor), &tokens, &numTokens);
+  CXCursorKind parentKind = clang_getCursorKind(parent);
+
+  CXSourceRange range = clang_getCursorExtent(parent);
+  CXTranslationUnit tu = clang_Cursor_getTranslationUnit(parent);
+
+  CXToken *tokens = nullptr;
+  unsigned int numTokens = 0;
+  clang_tokenize(tu, range, &tokens, &numTokens);
+
+  LhsType result = LHS_NONE;
 
   for (unsigned int i = 0; i < numTokens; ++i) {
     CXString tokenSpelling = clang_getTokenSpelling(tu, tokens[i]);
     string token = clang_getCString(tokenSpelling);
 
-    if (token == "=") {
-      clang_disposeString(tokenSpelling);
-      clang_disposeTokens(tu, tokens, numTokens);
-      return LHS_WRITE;
-    } else if (token == "+=" || token == "-=" || token == "*=" ||
-               token == "/=" || token == "++" || token == "--") {
-      clang_disposeString(tokenSpelling);
-      clang_disposeTokens(tu, tokens, numTokens);
-      return LHS_READ_AND_WRITE;
+    if (parentKind == CXCursor_BinaryOperator && token == "=") {
+      result = LHS_WRITE;
+    } else if (parentKind == CXCursor_UnaryOperator &&
+               (token == "++" || token == "--")) {
+      result = LHS_READ_AND_WRITE;
+    } else if (parentKind == CXCursor_CompoundAssignOperator) {
+      result = LHS_READ_AND_WRITE;
     }
 
     clang_disposeString(tokenSpelling);
   }
 
   clang_disposeTokens(tu, tokens, numTokens);
-  return LHS_NONE;
+
+  return result;
 }
 
 VariableInfo findVariableInfo(string varName) {
@@ -327,7 +329,6 @@ BranchType getBranchType(CXCursor cursor, CXCursor parent,
 
 struct VisitorData {
   unsigned int childIndex;
-  LhsType *lhsTypePtr;
   vector<GraphNode *> nodesToAdd;
 };
 
@@ -373,25 +374,19 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
 
   VisitorData *visitorData = reinterpret_cast<VisitorData *>(clientData);
   unsigned int childIndex = visitorData->childIndex;
-  LhsType *lhsTypePtr = visitorData->lhsTypePtr;
-  LhsType initialLhsType = *lhsTypePtr;
 
-  VisitorData childData = {0, lhsTypePtr, {}};
+  VisitorData childData = {0, {}};
   if (cursorKind == CXCursor_CallExpr) {
     handleFunctionCall(cursor, &childData.nodesToAdd);
   } else if (cursorKind == CXCursor_VarDecl ||
              cursorKind == CXCursor_DeclRefExpr ||
              cursorKind == CXCursor_ParmDecl) {
-    classifyVariable(cursor, initialLhsType, &visitorData->nodesToAdd);
+    LhsType lhsType = assignmentOperatorType(parent, childIndex);
+    classifyVariable(cursor, lhsType, &visitorData->nodesToAdd);
   } else if (cursorKind == CXCursor_BreakStmt) {
     environment->onAdd(new BreakNode());
   } else if (cursorKind == CXCursor_ContinueStmt) {
     environment->onAdd(new ContinueNode());
-  } else if (initialLhsType == LHS_NONE) {
-    LhsType cursorLhsType = assignmentOperatorType(cursor);
-    if (cursorLhsType != LHS_NONE) {
-      *lhsTypePtr = cursorLhsType;
-    }
   }
 
   BranchType branchType = getBranchType(cursor, parent, childIndex);
@@ -433,9 +428,6 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
       startNode = nullptr;
     }
   }
-  if (initialLhsType) {
-    *lhsTypePtr = LHS_NONE;
-  }
 
   visitorData->childIndex += 1;
   return CXChildVisit_Continue;
@@ -456,8 +448,7 @@ int main() {
 
   CXCursor cursor = clang_getTranslationUnitCursor(unit);
 
-  LhsType lhsType = LHS_NONE;
-  VisitorData initialData = {0, &lhsType, {}};
+  VisitorData initialData = {0, {}};
 
   environment = new ConstructionEnvironment();
   clang_visitChildren(cursor, visitor, &initialData);
