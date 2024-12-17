@@ -24,7 +24,7 @@ void ConstructionEnvironment::onAdd(IfNode *node) {
 void ConstructionEnvironment::onElseAdd() {
   IfNode *ifNode = ifStack.back();
   ifNode->hasElse = true;
-  if (currNode != nullptr) {
+  if (currNode != nullptr && currNode != ifNode) {
     endifListStack.back().push_back((BasicNode *)currNode);
   }
   currNode = ifNode;
@@ -35,6 +35,9 @@ void ConstructionEnvironment::onAdd(EndifNode *node) {
   std::vector<BasicNode *> endifNodes = endifListStack.back();
   for (int i = 0; i < endifNodes.size(); i++) {
     endifNodes[i]->add(node);
+  }
+  if (ifNode->ifNode == nullptr) {
+    ifNode->ifNode = node;
   }
   if (!ifNode->hasElse) {
     ifNode->hasElse = true;

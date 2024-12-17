@@ -306,15 +306,14 @@ BranchType getBranchType(CXCursor cursor, CXCursor parent,
                          unsigned int childIndex) {
   CXCursorKind cursorKind = clang_getCursorKind(cursor);
   CXCursorKind parentKind = clang_getCursorKind(parent);
-  if (parentKind == CXCursor_IfStmt) {
-    if (cursorKind == CXCursor_CompoundStmt) {
-      if (childIndex == 1) {
-        return BRANCH_IF;
-      } else if (childIndex == 2) {
-        return BRANCH_ELSE;
-      }
-    } else if (cursorKind == CXCursor_IfStmt) {
+  if (parentKind == CXCursor_IfStmt ||
+      parentKind == CXCursor_ConditionalOperator) {
+    if (childIndex == 1) {
+      return BRANCH_IF;
+    } else if (childIndex == 2 && cursorKind == CXCursor_IfStmt) {
       return BRANCH_ELSE_IF;
+    } else if (childIndex == 2) {
+      return BRANCH_ELSE;
     }
   } else if (parentKind == CXCursor_WhileStmt) {
     if (childIndex == 0) {
@@ -411,7 +410,8 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
   for (int i = 0; i < childData.nodesToAdd.size(); i++) {
     environment->onAdd(childData.nodesToAdd[i]);
   }
-  if (cursorKind == CXCursor_IfStmt) {
+  if (cursorKind == CXCursor_IfStmt ||
+      cursorKind == CXCursor_ConditionalOperator) {
     environment->onAdd(new EndifNode());
   } else if (branchType == BRANCH_WHILE) {
     environment->onAdd(new ContinueNode());
