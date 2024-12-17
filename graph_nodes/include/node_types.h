@@ -7,6 +7,7 @@ enum NodeType {
   READ,
   WRITE,
   FUNCTION_CALL,
+  THREAD_CREATE,
   STARTWHILE,
   WHILE,
   ENDWHILE,

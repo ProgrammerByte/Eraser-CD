@@ -11,6 +11,7 @@
 #include "return_node.h"
 #include "start_node.h"
 #include "startwhile_node.h"
+#include "thread_create_node.h"
 #include "unlock_node.h"
 #include "write_node.h"
 #include <clang-c/Index.h>
@@ -123,54 +124,124 @@ VariableInfo findVariableInfo(string varName) {
   return variableInfo;
 }
 
-void handleFunctionCall(CXCursor cursor, vector<GraphNode *> *nodesToAdd) {
-  string funcName = clang_getCString(clang_getCursorSpelling(cursor));
-
-  if (funcName != "pthread_mutex_lock" && funcName != "pthread_mutex_unlock") {
-    auto func = funcMap.find(funcName);
-    if (func != funcMap.end() && func->second) {
-      string fileName = getCursorFilename(cursor);
-      funcName = fileName + " " + funcName;
-    }
-    (*nodesToAdd).push_back(new FunctionCallNode(funcName));
-    return;
-  }
+CXCursor getFirstChild(CXCursor cursor) {
+  CXCursor firstChild = clang_getNullCursor();
 
   clang_visitChildren(
       cursor,
       [](CXCursor c, CXCursor parent, CXClientData clientData) {
-        CXCursorKind cursorKind = clang_getCursorKind(c);
-        if (clang_getCursorKind(c) == CXCursor_UnaryOperator) {
-          // when & is used
-          clang_visitChildren(
-              c,
-              [](CXCursor inner, CXCursor parent, CXClientData clientData) {
-                if (clang_getCursorKind(inner) == CXCursor_DeclRefExpr) {
-                  string varName =
-                      clang_getCString(clang_getCursorSpelling(inner));
-                  struct VariableInfo variableInfo = findVariableInfo(varName);
-                  if (variableInfo.isStatic) {
-                    string fileName = getCursorFilename(inner);
-                    varName = fileName + " " +
-                              to_string(variableInfo.scopeDepth) + " " +
-                              to_string(variableInfo.scopeNum) + " " + varName;
-                  }
-                  string funcName = *(string *)clientData;
-                  if (funcName == "pthread_mutex_lock") {
-                    environment->onAdd(new LockNode(varName));
-                  } else if (funcName == "pthread_mutex_unlock") {
-                    environment->onAdd(new UnlockNode(varName));
-                  }
-                }
-                return CXChildVisit_Break;
-              },
-              clientData);
-          return CXChildVisit_Continue;
+        CXCursor *firstChildPtr = reinterpret_cast<CXCursor *>(clientData);
+
+        *firstChildPtr = c;
+        return CXChildVisit_Break;
+      },
+      &firstChild);
+
+  return firstChild;
+}
+
+string getThirdArg(CXCursor cursor) {
+  struct ArgClientData {
+    int argNum;
+    CXCursor *argCursor;
+  };
+
+  struct ArgClientData clientData = {0, NULL};
+
+  clang_visitChildren(
+      cursor,
+      [](CXCursor c, CXCursor parent, CXClientData clientData) {
+        struct ArgClientData *argClientData =
+            reinterpret_cast<struct ArgClientData *>(clientData);
+
+        argClientData->argNum++;
+
+        if (argClientData->argNum == 4) {
+          argClientData->argCursor = &c;
+          return CXChildVisit_Break;
         }
 
         return CXChildVisit_Continue;
       },
-      &funcName);
+      &clientData);
+
+  if (clientData.argNum >= 4) {
+    CXCursor argCursor = *clientData.argCursor;
+
+    while (clang_getCursorKind(argCursor) == CXCursor_UnexposedExpr) {
+      argCursor = getFirstChild(argCursor);
+    }
+    if (clang_getCursorKind(argCursor) == CXCursor_DeclRefExpr) {
+      CXString argSpelling = clang_getCursorSpelling(argCursor);
+      string result = clang_getCString(argSpelling);
+      clang_disposeString(argSpelling);
+      return result;
+    }
+  }
+  return "";
+}
+
+string getFuncName(CXCursor cursor, string funcName) {
+  auto func = funcMap.find(funcName);
+  if (func != funcMap.end() && func->second) {
+    string fileName = getCursorFilename(cursor);
+    funcName = fileName + " " + funcName;
+  }
+  return funcName;
+}
+
+void handleFunctionCall(CXCursor cursor, vector<GraphNode *> *nodesToAdd) {
+  string funcName = clang_getCString(clang_getCursorSpelling(cursor));
+
+  if (funcName == "pthread_create") {
+    string called = getThirdArg(cursor);
+    if (called != "") {
+      string funcName = getFuncName(cursor, called);
+      environment->onAdd(new ThreadCreateNode(funcName));
+    }
+  } else if (funcName == "pthread_mutex_lock" ||
+             funcName == "pthread_mutex_unlock") {
+    clang_visitChildren(
+        cursor,
+        [](CXCursor c, CXCursor parent, CXClientData clientData) {
+          CXCursorKind cursorKind = clang_getCursorKind(c);
+          if (clang_getCursorKind(c) == CXCursor_UnaryOperator) {
+            // when & is used
+            clang_visitChildren(
+                c,
+                [](CXCursor inner, CXCursor parent, CXClientData clientData) {
+                  if (clang_getCursorKind(inner) == CXCursor_DeclRefExpr) {
+                    string varName =
+                        clang_getCString(clang_getCursorSpelling(inner));
+                    struct VariableInfo variableInfo =
+                        findVariableInfo(varName);
+                    if (variableInfo.isStatic) {
+                      string fileName = getCursorFilename(inner);
+                      varName = fileName + " " +
+                                to_string(variableInfo.scopeDepth) + " " +
+                                to_string(variableInfo.scopeNum) + " " +
+                                varName;
+                    }
+                    string funcName = *(string *)clientData;
+                    if (funcName == "pthread_mutex_lock") {
+                      environment->onAdd(new LockNode(varName));
+                    } else if (funcName == "pthread_mutex_unlock") {
+                      environment->onAdd(new UnlockNode(varName));
+                    }
+                  }
+                  return CXChildVisit_Break;
+                },
+                clientData);
+            return CXChildVisit_Continue;
+          }
+
+          return CXChildVisit_Continue;
+        },
+        &funcName);
+  } else if (funcName != "pthread_join") {
+    funcName = getFuncName(cursor, funcName);
+    (*nodesToAdd).push_back(new FunctionCallNode(funcName));
+  }
 }
 
 void classifyVariable(CXCursor cursor, LhsType lhsType,
