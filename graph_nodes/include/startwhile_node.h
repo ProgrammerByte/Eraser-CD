@@ -5,7 +5,7 @@ class StartwhileNode : public BasicNode {
 public:
   explicit StartwhileNode();
   virtual ~StartwhileNode();
-  bool isContinueReturn = true;
+  GraphNode *continueReturn = this;
   bool isDoWhile = false;
 
   std::string getPrintableName();

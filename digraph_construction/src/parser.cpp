@@ -36,6 +36,8 @@ enum BranchType {
   BRANCH_DO_WHILE_START,
   BRANCH_DO_WHILE_COND,
   BRANCH_FOR_START,
+  BRANCH_FOR_ITERATOR,
+  BRANCH_FOR
 };
 
 enum LhsType { LHS_NONE, LHS_WRITE, LHS_READ_AND_WRITE };
@@ -327,10 +329,13 @@ BranchType getBranchType(CXCursor cursor, CXCursor parent,
       return BRANCH_WHILE;
     }
   } else if (parentKind == CXCursor_ForStmt) {
-    if (childIndex == 0) {
+    if (childIndex == 1) {
       return BRANCH_FOR_START;
+    } else if (childIndex == 2) {
+      return BRANCH_FOR_ITERATOR;
+    } else if (childIndex == 3) {
+      return BRANCH_FOR;
     }
-    // TODO - NOT FINISHED OBVS
   } else if (parentKind == CXCursor_DoStmt) {
     if (childIndex == 0) {
       return BRANCH_DO_WHILE_START;
@@ -404,6 +409,7 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
   }
 
   BranchType branchType = getBranchType(cursor, parent, childIndex);
+  WhileNode *forNodeLoop = nullptr;
 
   if (branchType == BRANCH_IF) {
     environment->onAdd(new IfNode());
@@ -416,10 +422,14 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
   } else if (branchType == BRANCH_DO_WHILE_START ||
              branchType == BRANCH_FOR_START) {
     StartwhileNode *startwhileNode = new StartwhileNode();
-    startwhileNode->isContinueReturn = false;
+    startwhileNode->continueReturn = nullptr;
     startwhileNode->isDoWhile = branchType == BRANCH_DO_WHILE_START;
     environment->onAdd(startwhileNode);
   } else if (branchType == BRANCH_DO_WHILE_COND) {
+    environment->onAdd(new ContinueReturnNode());
+  } else if (branchType == BRANCH_FOR_ITERATOR) {
+    forNodeLoop = new WhileNode();
+    environment->onAdd(forNodeLoop);
     environment->onAdd(new ContinueReturnNode());
   }
 
@@ -441,6 +451,12 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
     WhileNode *whileNode = new WhileNode();
     whileNode->isDoWhile = true;
     environment->onAdd(whileNode);
+    environment->onAdd(new EndwhileNode());
+  } else if (branchType == BRANCH_FOR_ITERATOR) {
+    environment->goBackToStartWhile();
+    environment->currNode = forNodeLoop;
+  } else if (branchType == BRANCH_FOR) {
+    environment->onAdd(new ContinueNode());
     environment->onAdd(new EndwhileNode());
   }
   if (cursorKind == CXCursor_CompoundStmt) {

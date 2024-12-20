@@ -12,6 +12,10 @@ void ConstructionEnvironment::onAdd(GraphNode *node) {
   }
 }
 
+void ConstructionEnvironment::goBackToStartWhile() {
+  ConstructionEnvironment::onAdd(startwhileStack.back());
+}
+
 void ConstructionEnvironment::callOnAdd(GraphNode *node) { onAdd(node); }
 
 void ConstructionEnvironment::onAdd(IfNode *node) {
@@ -58,7 +62,7 @@ void ConstructionEnvironment::onAdd(EndifNode *node) {
 
 void ConstructionEnvironment::onAdd(StartwhileNode *node) {
   startwhileStack.push_back(node);
-  if (!node->isContinueReturn) {
+  if (node->continueReturn == nullptr) {
     continueListStack.push_back(std::vector<ContinueNode *>(0));
   }
   if (node->isDoWhile) {
@@ -105,8 +109,8 @@ void ConstructionEnvironment::onAdd(BreakNode *node) {
 
 void ConstructionEnvironment::onAdd(ContinueNode *node) {
   callOnAdd(node);
-  if (startwhileStack.back()->isContinueReturn) {
-    node->next = startwhileStack.back();
+  if (startwhileStack.back()->continueReturn != nullptr) {
+    node->next = startwhileStack.back()->continueReturn;
   } else {
     continueListStack.back().push_back(node);
   }
@@ -120,6 +124,7 @@ void ConstructionEnvironment::onAdd(ContinueReturnNode *node) {
     continueNodes[i]->next = node;
   }
   StartwhileNode *startwhileNode = startwhileStack.back();
+  startwhileNode->continueReturn = node;
   currNode = node;
 }
 

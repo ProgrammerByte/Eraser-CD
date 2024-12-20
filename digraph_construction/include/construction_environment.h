@@ -14,10 +14,12 @@
 
 class ConstructionEnvironment {
 public:
+  GraphNode *currNode;
   explicit ConstructionEnvironment() = default;
   virtual ~ConstructionEnvironment() = default;
 
   StartNode *startNewTree(std::string funcName);
+  void goBackToStartWhile();
   void onAdd(GraphNode *node);
   void onAdd(IfNode *node);
   void onElseAdd();
@@ -33,7 +35,6 @@ public:
 private:
   void callOnAdd(GraphNode *node);
 
-  GraphNode *currNode;
   std::vector<IfNode *> ifStack;
   std::vector<std::vector<BasicNode *>> endifListStack;
   std::vector<WhileNode *> whileStack;
