@@ -32,7 +32,10 @@ enum BranchType {
   BRANCH_ELSE_IF,
   BRANCH_ELSE,
   BRANCH_STARTWHILE,
-  BRANCH_WHILE
+  BRANCH_WHILE,
+  BRANCH_DO_WHILE_START,
+  BRANCH_DO_WHILE_COND,
+  BRANCH_FOR_START,
 };
 
 enum LhsType { LHS_NONE, LHS_WRITE, LHS_READ_AND_WRITE };
@@ -323,6 +326,17 @@ BranchType getBranchType(CXCursor cursor, CXCursor parent,
     } else if (childIndex == 1) {
       return BRANCH_WHILE;
     }
+  } else if (parentKind == CXCursor_ForStmt) {
+    if (childIndex == 0) {
+      return BRANCH_FOR_START;
+    }
+    // TODO - NOT FINISHED OBVS
+  } else if (parentKind == CXCursor_DoStmt) {
+    if (childIndex == 0) {
+      return BRANCH_DO_WHILE_START;
+    } else if (childIndex == 1) {
+      return BRANCH_DO_WHILE_COND;
+    }
   }
   return BRANCH_NONE;
 }
@@ -399,6 +413,14 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
     environment->onAdd(new StartwhileNode());
   } else if (branchType == BRANCH_WHILE) {
     environment->onAdd(new WhileNode());
+  } else if (branchType == BRANCH_DO_WHILE_START ||
+             branchType == BRANCH_FOR_START) {
+    StartwhileNode *startwhileNode = new StartwhileNode();
+    startwhileNode->isContinueReturn = false;
+    startwhileNode->isDoWhile = branchType == BRANCH_DO_WHILE_START;
+    environment->onAdd(startwhileNode);
+  } else if (branchType == BRANCH_DO_WHILE_COND) {
+    environment->onAdd(new ContinueReturnNode());
   }
 
   clang_visitChildren(cursor, visitor, &childData);
@@ -413,6 +435,13 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
     environment->onAdd(new EndwhileNode());
   } else if (cursorKind == CXCursor_ReturnStmt) {
     environment->onAdd(new ReturnNode());
+  } else if (branchType == BRANCH_DO_WHILE_START) {
+    environment->onAdd(new ContinueNode());
+  } else if (branchType == BRANCH_DO_WHILE_COND) {
+    WhileNode *whileNode = new WhileNode();
+    whileNode->isDoWhile = true;
+    environment->onAdd(whileNode);
+    environment->onAdd(new EndwhileNode());
   }
   if (cursorKind == CXCursor_CompoundStmt) {
     scopeStack.pop_back();

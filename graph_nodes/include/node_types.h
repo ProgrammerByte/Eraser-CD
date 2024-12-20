@@ -13,6 +13,7 @@ enum NodeType {
   ENDWHILE,
   BREAK,
   CONTINUE,
+  CONTINUE_RETURN,
   IF,
   ENDIF,
   RETURN

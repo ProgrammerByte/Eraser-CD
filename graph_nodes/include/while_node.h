@@ -6,6 +6,7 @@ class WhileNode : public GraphNode {
 public:
   GraphNode *whileNode = nullptr;
   EndwhileNode *endWhile = nullptr;
+  bool isDoWhile = false;
   explicit WhileNode();
   virtual ~WhileNode();
   GraphNode *getNextNode();

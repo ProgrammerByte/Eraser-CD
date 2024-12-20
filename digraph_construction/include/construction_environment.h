@@ -1,6 +1,7 @@
 #pragma once
 #include "break_node.h"
 #include "continue_node.h"
+#include "continue_return_node.h"
 #include "endif_node.h"
 #include "endwhile_node.h"
 #include "if_node.h"
@@ -26,6 +27,7 @@ public:
   void onAdd(EndwhileNode *node);
   void onAdd(BreakNode *node);
   void onAdd(ContinueNode *node);
+  void onAdd(ContinueReturnNode *node);
   void onAdd(ReturnNode *node);
 
 private:
@@ -37,5 +39,6 @@ private:
   std::vector<WhileNode *> whileStack;
   std::vector<StartwhileNode *> startwhileStack;
   std::vector<std::vector<BreakNode *>> breakListStack;
+  std::vector<std::vector<ContinueNode *>> continueListStack;
   std::vector<GraphNode *> scopeStack;
 };

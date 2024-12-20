@@ -58,37 +58,45 @@ void ConstructionEnvironment::onAdd(EndifNode *node) {
 
 void ConstructionEnvironment::onAdd(StartwhileNode *node) {
   startwhileStack.push_back(node);
+  if (!node->isContinueReturn) {
+    continueListStack.push_back(std::vector<ContinueNode *>(0));
+  }
+  if (node->isDoWhile) {
+    scopeStack.push_back(node);
+    breakListStack.push_back(std::vector<BreakNode *>(0));
+  }
   callOnAdd(node);
 }
 
 void ConstructionEnvironment::onAdd(WhileNode *node) {
-  whileStack.push_back(node);
-  scopeStack.push_back(node);
-  breakListStack.push_back(std::vector<BreakNode *>(0));
   callOnAdd(node);
+  whileStack.push_back(node);
+  if (node->isDoWhile) {
+    node->whileNode = startwhileStack.back();
+  } else {
+    scopeStack.push_back(node);
+    breakListStack.push_back(std::vector<BreakNode *>(0));
+  }
 }
 
 void ConstructionEnvironment::onAdd(EndwhileNode *node) {
   std::vector<BreakNode *> breakNodes = breakListStack.back();
+  StartwhileNode *startwhileNode = startwhileStack.back();
   WhileNode *whileNode = whileStack.back();
+  whileNode->endWhile = node;
+
+  whileStack.pop_back();
   breakListStack.pop_back();
   scopeStack.pop_back();
-  whileStack.pop_back();
   startwhileStack.pop_back();
 
   for (int i = 0; i < breakNodes.size(); i++) {
     breakNodes[i]->next = node;
   }
   node->numBreaks = breakNodes.size();
-  whileNode->endWhile = node;
-  if (currNode == nullptr) {
-    currNode = node;
-  } else {
-    callOnAdd(node);
-  }
+  currNode = node;
 }
 
-// TODO - IMPLEMENT THESE TWO!!!
 void ConstructionEnvironment::onAdd(BreakNode *node) {
   callOnAdd(node);
   breakListStack.back().push_back(node);
@@ -97,8 +105,22 @@ void ConstructionEnvironment::onAdd(BreakNode *node) {
 
 void ConstructionEnvironment::onAdd(ContinueNode *node) {
   callOnAdd(node);
-  node->next = startwhileStack.back();
+  if (startwhileStack.back()->isContinueReturn) {
+    node->next = startwhileStack.back();
+  } else {
+    continueListStack.back().push_back(node);
+  }
   currNode = nullptr;
+}
+
+void ConstructionEnvironment::onAdd(ContinueReturnNode *node) {
+  std::vector<ContinueNode *> continueNodes = continueListStack.back();
+  continueListStack.pop_back();
+  for (int i = 0; i < continueNodes.size(); i++) {
+    continueNodes[i]->next = node;
+  }
+  StartwhileNode *startwhileNode = startwhileStack.back();
+  currNode = node;
 }
 
 void ConstructionEnvironment::onAdd(ReturnNode *node) {
