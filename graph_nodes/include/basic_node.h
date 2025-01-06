@@ -10,4 +10,7 @@ public:
 
   GraphNode *getNextNode();
   void add(GraphNode *node);
+
+  std::vector<GraphNode *> getForwardBranches();
+  std::vector<GraphNode *> getBackwardBranches();
 };

@@ -4,7 +4,6 @@
 
 class EndwhileNode : public BasicNode {
 public:
-  int numBreaks = 0;
   explicit EndwhileNode();
   virtual ~EndwhileNode();
 

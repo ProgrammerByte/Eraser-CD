@@ -7,6 +7,7 @@
 #include "graph_visualizer.h"
 #include "if_node.h"
 #include "lock_node.h"
+#include "over_approximated_static_eraser.h"
 #include "read_node.h"
 #include "return_node.h"
 #include "start_node.h"
@@ -499,6 +500,11 @@ int main() {
   clang_visitChildren(cursor, visitor, &initialData);
   GraphVisualizer *visualizer = new GraphVisualizer();
   visualizer->visualizeGraph(funcCfgs[functions[1]]);
+
+  OverApproximatedStaticEraser *staticEraser =
+      new OverApproximatedStaticEraser();
+
+  staticEraser->testFunction(funcCfgs, "main");
 
   clang_disposeTranslationUnit(unit);
   clang_disposeIndex(index);

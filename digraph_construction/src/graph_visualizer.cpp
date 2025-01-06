@@ -50,6 +50,8 @@ void GraphVisualizer::visualizeGraph(StartNode *node) {
     return;
   }
 
+  // create a pointer to node map.
+
   file << "digraph G {\n";
   for (GraphNode *node : nodes) {
     file << "  " << pointerToString(node) << " [label=\"" << nodeNames[node]

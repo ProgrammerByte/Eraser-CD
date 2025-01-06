@@ -7,7 +7,5 @@ public:
   virtual ~WriteNode();
 
   std::string getPrintableName();
-
-private:
   std::string varName;
 };

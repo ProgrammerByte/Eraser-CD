@@ -8,7 +8,5 @@ public:
   virtual ~UnlockNode();
 
   std::string getPrintableName();
-
-private:
   std::string varName;
 };

@@ -1,4 +1,5 @@
 #include "basic_node.h"
+#include <vector>
 
 BasicNode::BasicNode(NodeType type) : GraphNode::GraphNode(type) {}
 
@@ -12,3 +13,6 @@ GraphNode *BasicNode::getNextNode() {
 }
 
 void BasicNode::add(GraphNode *node) { next = node; }
+
+std::vector<GraphNode *> BasicNode::getForwardBranches() { return {next}; }
+std::vector<GraphNode *> BasicNode::getBackwardBranches() { return {}; }

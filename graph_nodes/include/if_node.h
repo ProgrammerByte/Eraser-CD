@@ -1,5 +1,6 @@
 #pragma once
 #include "graph_node.h"
+#include <vector>
 
 class IfNode : public GraphNode {
 public:
@@ -11,4 +12,7 @@ public:
   GraphNode *getNextNode();
   void add(GraphNode *node);
   std::string getPrintableName();
+
+  std::vector<GraphNode *> getForwardBranches();
+  std::vector<GraphNode *> getBackwardBranches();
 };
