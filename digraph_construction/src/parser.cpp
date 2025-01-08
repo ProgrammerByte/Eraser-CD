@@ -209,6 +209,9 @@ void handleFunctionCall(CXCursor cursor, vector<GraphNode *> *nodesToAdd) {
     if (called != "") {
       string funcName = getFuncName(cursor, called);
       environment->onAdd(new ThreadCreateNode(funcName));
+      // TODO - MAYBE CHANGE EDGE TYPE HERE?? ONLY AN OPTIMISATION FOR DELTA
+      // LOCKSETS
+      callGraph->addEdge(caller, funcName);
     }
   } else if (funcName == "pthread_mutex_lock" ||
              funcName == "pthread_mutex_unlock") {
