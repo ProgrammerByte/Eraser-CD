@@ -52,7 +52,9 @@
         "semaphore": "cpp",
         "stop_token": "cpp",
         "thread": "cpp",
-        "set": "cpp"
+        "set": "cpp",
+        "unordered_set": "cpp",
+        "pthread.h": "c"
     },
     "cSpell.words": [
         "STARTWHILE"

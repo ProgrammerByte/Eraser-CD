@@ -366,10 +366,6 @@ void onNewScope() {
 
 CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
                            CXClientData clientData) {
-  // TODO - REMOVE THIS IF STATEMENT IN A BIT!!!
-  if (clang_Location_isFromMainFile(clang_getCursorLocation(cursor)) == 0) {
-    return CXChildVisit_Continue;
-  }
   CXCursorKind cursorKind = clang_getCursorKind(cursor);
   CXCursorKind parentKind =
       clang_getCursorKind(clang_getCursorSemanticParent(cursor));
@@ -467,6 +463,10 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
     scopeDepth -= 1;
   }
   if (cursorKind == CXCursor_FunctionDecl) {
+    if (ignoreNextCompound) {
+      scopeStack.pop_back();
+      scopeDepth -= 1;
+    }
     ignoreNextCompound = false;
     inFunc = 0;
     if (startNode != nullptr) {
