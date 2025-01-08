@@ -129,7 +129,7 @@ void runStatement(sqlite3_stmt *stmt) {
   sqlite3_finalize(stmt);
 }
 
-void markNodes(std::vector<std::string> &startNodes) {
+void markNodes(std::vector<std::string> &startNodes, bool reverse = false) {
   std::vector<std::string> q = {};
 
   for (const auto &node : startNodes) {
@@ -145,24 +145,47 @@ void markNodes(std::vector<std::string> &startNodes) {
     prepareStatement(stmt, query, q);
     runStatement(stmt);
 
-    query =
-        "WITH neighbors AS ("
-        " SELECT funcname1 AS funcname, COUNT(*) AS cnt FROM adjacency_matrix "
-        " JOIN nodes_table ON nodes_table.funcname = "
-        " adjacency_matrix.funcname1 WHERE adjacency_matrix.funcname2 IN " +
-        createTupleList(q) +
-        " GROUP BY funcname1"
-        "),"
-        "result AS ("
-        " SELECT neighbors.funcname FROM neighbors"
-        " INNER JOIN nodes_table ON nodes_table.funcname = neighbors.funcname"
-        " WHERE marked = 0"
-        ")"
-        "UPDATE nodes_table "
-        "SET indegree = indegree + COALESCE(("
-        " SELECT cnt FROM neighbors WHERE neighbors.funcname = "
-        " nodes_table.funcname"
-        "), 0);";
+    if (reverse) {
+      query =
+          "WITH neighbors AS ("
+          " SELECT funcname1 AS funcname, COUNT(*) AS cnt FROM "
+          "adjacency_matrix "
+          " JOIN nodes_table ON nodes_table.funcname = "
+          " adjacency_matrix.funcname1 WHERE adjacency_matrix.funcname2 IN " +
+          createTupleList(q) +
+          " GROUP BY funcname1"
+          "),"
+          "result AS ("
+          " SELECT neighbors.funcname FROM neighbors"
+          " INNER JOIN nodes_table ON nodes_table.funcname = neighbors.funcname"
+          " WHERE marked = 0"
+          ")"
+          "UPDATE nodes_table "
+          "SET indegree = indegree + COALESCE(("
+          " SELECT cnt FROM neighbors WHERE neighbors.funcname = "
+          " nodes_table.funcname"
+          "), 0);";
+    } else {
+      query =
+          "WITH neighbors AS ("
+          " SELECT funcname2 AS funcname, COUNT(*) AS cnt FROM "
+          "adjacency_matrix "
+          " JOIN nodes_table ON nodes_table.funcname = "
+          " adjacency_matrix.funcname2 WHERE adjacency_matrix.funcname1 IN " +
+          createTupleList(q) +
+          " GROUP BY funcname2"
+          "),"
+          "result AS ("
+          " SELECT neighbors.funcname FROM neighbors"
+          " INNER JOIN nodes_table ON nodes_table.funcname = neighbors.funcname"
+          " WHERE marked = 0"
+          ")"
+          "UPDATE nodes_table "
+          "SET indegree = indegree + COALESCE(("
+          " SELECT cnt FROM neighbors WHERE neighbors.funcname = "
+          " nodes_table.funcname"
+          "), 0);";
+    }
 
     prepareStatement(stmt, query, q);
     runStatement(stmt);
@@ -205,30 +228,54 @@ std::vector<std::string> getNextNodes(std::vector<std::string> &order) {
   return q;
 }
 
-std::vector<std::string> traverseGraph() {
+std::vector<std::string> traverseGraph(bool reverse = false) {
   std::vector<std::string> order = {};
   std::vector<std::string> q = getNextNodes(order);
 
   while (!q.empty()) {
     sqlite3_stmt *stmt;
-    std::string query =
-        "WITH neighbors AS ("
-        " SELECT funcname1 AS funcname, COUNT(*) AS cnt FROM adjacency_matrix "
-        " JOIN nodes_table ON nodes_table.funcname = "
-        " adjacency_matrix.funcname1 WHERE adjacency_matrix.funcname2 IN " +
-        createTupleList(q) +
-        " GROUP BY funcname1"
-        "),"
-        "result AS ("
-        " SELECT neighbors.funcname FROM neighbors"
-        " INNER JOIN nodes_table ON nodes_table.funcname = neighbors.funcname"
-        " WHERE marked = 1"
-        ")"
-        "UPDATE nodes_table "
-        "SET indegree = indegree - COALESCE(("
-        " SELECT cnt FROM neighbors WHERE neighbors.funcname = "
-        " nodes_table.funcname"
-        "), 0);";
+    std::string query;
+    if (reverse) {
+      query =
+          "WITH neighbors AS ("
+          " SELECT funcname1 AS funcname, COUNT(*) AS cnt FROM "
+          "adjacency_matrix "
+          " JOIN nodes_table ON nodes_table.funcname = "
+          " adjacency_matrix.funcname1 WHERE adjacency_matrix.funcname2 IN " +
+          createTupleList(q) +
+          " GROUP BY funcname1"
+          "),"
+          "result AS ("
+          " SELECT neighbors.funcname FROM neighbors"
+          " INNER JOIN nodes_table ON nodes_table.funcname = neighbors.funcname"
+          " WHERE marked = 1"
+          ")"
+          "UPDATE nodes_table "
+          "SET indegree = indegree - COALESCE(("
+          " SELECT cnt FROM neighbors WHERE neighbors.funcname = "
+          " nodes_table.funcname"
+          "), 0);";
+    } else {
+      query =
+          "WITH neighbors AS ("
+          " SELECT funcname2 AS funcname, COUNT(*) AS cnt FROM "
+          "adjacency_matrix "
+          " JOIN nodes_table ON nodes_table.funcname = "
+          " adjacency_matrix.funcname2 WHERE adjacency_matrix.funcname1 IN " +
+          createTupleList(q) +
+          " GROUP BY funcname2"
+          "),"
+          "result AS ("
+          " SELECT neighbors.funcname FROM neighbors"
+          " INNER JOIN nodes_table ON nodes_table.funcname = neighbors.funcname"
+          " WHERE marked = 1"
+          ")"
+          "UPDATE nodes_table "
+          "SET indegree = indegree - COALESCE(("
+          " SELECT cnt FROM neighbors WHERE neighbors.funcname = "
+          " nodes_table.funcname"
+          "), 0);";
+    }
 
     prepareStatement(stmt, query, q);
     runStatement(stmt);
@@ -259,9 +306,17 @@ int main(int argc, char *argv[]) {
   createTables();
   insertExampleData();
   std::vector<std::string> startNodes = {"f1", "f6"};
+  markNodes(startNodes, true);
+  std::vector<std::string> order = traverseGraph(true);
+  std::cout << "Ordering for delta locksets:" << std::endl;
+  for (int i = 0; i < order.size(); i++) {
+    std::cout << order[i] << std::endl;
+  }
+
+  startNodes = {"t2"};
   markNodes(startNodes);
-  std::vector<std::string> order = traverseGraph();
-  std::cout << "Ordering:" << std::endl;
+  order = traverseGraph();
+  std::cout << "Ordering for static Eraser:" << std::endl;
   for (int i = 0; i < order.size(); i++) {
     std::cout << order[i] << std::endl;
   }
