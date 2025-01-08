@@ -201,6 +201,7 @@ string getFuncName(CXCursor cursor, string funcName) {
 }
 
 void handleFunctionCall(CXCursor cursor, vector<GraphNode *> *nodesToAdd) {
+  string caller = funcName;
   string funcName = clang_getCString(clang_getCursorSpelling(cursor));
 
   if (funcName == "pthread_create") {
@@ -251,6 +252,7 @@ void handleFunctionCall(CXCursor cursor, vector<GraphNode *> *nodesToAdd) {
   } else if (funcName != "pthread_join") {
     funcName = getFuncName(cursor, funcName);
     (*nodesToAdd).push_back(new FunctionCallNode(funcName));
+    callGraph->addEdge(caller, funcName);
   }
 }
 
@@ -473,6 +475,8 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
       environment->onAdd(new ReturnNode());
       functions.push_back(funcName);
       funcCfgs.insert({funcName, startNode});
+      // TODO - FLAG AS RECURSIVE
+      callGraph->addNode(funcName);
       startNode = nullptr;
     }
   }
