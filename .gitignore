@@ -1,5 +1,6 @@
 **.out
 **.cmake
+**.db
 **CMakeCache.txt
 **Makefile
 **/CMakeFiles
