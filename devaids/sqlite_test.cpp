@@ -22,7 +22,7 @@ void deleteDatabase() {
 void createTables() {
   std::cout << "Created database successfully" << std::endl;
 
-  const char *createNodesTable = R"(
+  std::string query = R"(
     CREATE TABLE nodes_table (
       funcname TEXT PRIMARY KEY,
       indegree INTEGER DEFAULT 0,
@@ -30,25 +30,24 @@ void createTables() {
     );
   )";
 
-  if (sqlite3_exec(db, createNodesTable, nullptr, nullptr, &errMsg) !=
-      SQLITE_OK) {
+  if (sqlite3_exec(db, query.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
     std::cerr << "Error creating nodes_table: " << errMsg << std::endl;
     sqlite3_free(errMsg);
   } else {
     std::cout << "Table nodes_table created successfully." << std::endl;
   }
 
-  const char *createAdjacencyMatrix = R"(
+  query = R"(
     CREATE TABLE adjacency_matrix (
       funcname1 TEXT,
       funcname2 TEXT,
       FOREIGN KEY (funcname1) REFERENCES nodes(funcname),
       FOREIGN KEY (funcname2) REFERENCES nodes(funcname)
+      UNIQUE(funcname1, funcname2)
     );
   )";
 
-  if (sqlite3_exec(db, createAdjacencyMatrix, nullptr, nullptr, &errMsg) !=
-      SQLITE_OK) {
+  if (sqlite3_exec(db, query.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
     std::cerr << "Error creating adjacency_matrix: " << errMsg << std::endl;
     sqlite3_free(errMsg);
   } else {
@@ -57,27 +56,26 @@ void createTables() {
 }
 
 void insertExampleData() {
-  const char *insertNodes = R"(
+  std::string query = R"(
     INSERT INTO nodes_table (funcname)
     VALUES ('t1'), ('t2'), ('t3'), ('f1'), ('f2'), ('f3'), ('f4'), ('f5'), ('f6'), ('f7');
   )";
 
-  if (sqlite3_exec(db, insertNodes, nullptr, nullptr, &errMsg) != SQLITE_OK) {
+  if (sqlite3_exec(db, query.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
     std::cerr << "Error inserting into nodes_table: " << errMsg << std::endl;
     sqlite3_free(errMsg);
   } else {
     std::cout << "Inserted into nodes_table successfully." << std::endl;
   }
 
-  const char *insertAdjacency = R"(
+  query = R"(
     INSERT INTO adjacency_matrix (funcname1, funcname2)
     VALUES ('t1', 'f1'), ('t2', 'f2'), ('t3', 'f5'),
            ('f1', 'f3'), ('f1', 'f4'), ('f2', 'f4'), ('f2', 'f6'),
            ('f2', 'f7'), ('f4', 'f6'), ('f5', 'f6'), ('f7', 'f6')
   )";
 
-  if (sqlite3_exec(db, insertAdjacency, nullptr, nullptr, &errMsg) !=
-      SQLITE_OK) {
+  if (sqlite3_exec(db, query.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
     std::cerr << "Error inserting into adjacency_matrix: " << errMsg
               << std::endl;
     sqlite3_free(errMsg);

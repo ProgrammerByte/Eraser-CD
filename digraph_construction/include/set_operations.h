@@ -2,6 +2,7 @@
 // https://stackoverflow.com/questions/13448064/how-to-find-the-intersection-of-two-stl-sets
 
 #pragma once
+#include <algorithm>
 #include <iterator>
 #include <set>
 

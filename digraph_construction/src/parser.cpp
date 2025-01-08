@@ -1,4 +1,5 @@
 #include "break_node.h"
+#include "call_graph.h"
 #include "construction_environment.h"
 #include "continue_node.h"
 #include "endif_node.h"
@@ -54,6 +55,7 @@ static bool ignoreNextCompound = false;
 static string funcName = "";
 static StartNode *startNode = nullptr;
 static ConstructionEnvironment *environment;
+static CallGraph *callGraph;
 
 // Utility to convert CXString to ostream easily
 ostream &operator<<(ostream &stream, const CXString &str) {
@@ -497,6 +499,7 @@ int main() {
   VisitorData initialData = {0, {}};
 
   environment = new ConstructionEnvironment();
+  callGraph = new CallGraph();
   clang_visitChildren(cursor, visitor, &initialData);
   GraphVisualizer *visualizer = new GraphVisualizer();
   visualizer->visualizeGraph(funcCfgs[functions[1]]);
@@ -504,7 +507,7 @@ int main() {
   OverApproximatedStaticEraser *staticEraser =
       new OverApproximatedStaticEraser();
 
-  staticEraser->testFunction(funcCfgs, "main");
+  // staticEraser->testFunction(funcCfgs, "main");
 
   clang_disposeTranslationUnit(unit);
   clang_disposeIndex(index);

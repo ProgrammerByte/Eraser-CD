@@ -8,7 +8,9 @@ file(GLOB DIGRAPH_SRC CONFIGURE_DEPENDS src/*.cpp)
 include_directories("/usr/lib/llvm-14/include")
 link_directories("/usr/lib/llvm-14/lib")
 
+find_package(SQLite3 REQUIRED)
+
 add_executable(digraph_construction src/parser.cpp ${DIGRAPH_SRC})
 
-target_link_libraries(digraph_construction PRIVATE clang graph_nodes)
+target_link_libraries(digraph_construction PRIVATE clang graph_nodes SQLite::SQLite3)
 target_include_directories(digraph_construction PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
