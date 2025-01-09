@@ -3,6 +3,10 @@
 
 GraphNode::GraphNode(NodeType type) : type(type) {}
 
+std::string GraphNode::getPrintableNameWithId() {
+  return std::to_string(id) + " " + getPrintableName();
+}
+
 std::string GraphNode::getNodeType() {
   switch (type) {
   case START:

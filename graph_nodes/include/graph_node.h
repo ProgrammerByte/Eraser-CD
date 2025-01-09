@@ -16,6 +16,12 @@ public:
   virtual void add(GraphNode *node) = 0;
   virtual GraphNode *getNextNode() = 0;
   virtual std::string getPrintableName() = 0;
+
+  std::string getPrintableNameWithId();
+
+  int id = 0;
+
+  // TODO - I BET ALL THIS STUFF BELOW HERE CAN JUST GO!!!
   virtual std::vector<GraphNode *> getForwardBranches() = 0;
   virtual std::vector<GraphNode *>
   getBackwardBranches() = 0; // TODO - NO NOTION OF BACKWARD BRANCHES NEEDED IN

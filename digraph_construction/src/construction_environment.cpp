@@ -2,10 +2,20 @@
 
 StartNode *ConstructionEnvironment::startNewTree(std::string funcName) {
   currNode = new StartNode(funcName);
+  currNode->id = 1;
+  currId = 1;
   return (StartNode *)currNode;
 };
 
+void ConstructionEnvironment::setNodeId(GraphNode *node) {
+  if (node != nullptr && node->id == 0) {
+    currId += 1;
+    node->id = currId;
+  }
+}
+
 void ConstructionEnvironment::onAdd(GraphNode *node) {
+  setNodeId(node);
   if (currNode != nullptr) {
     currNode->add(node);
     currNode = node;
@@ -58,6 +68,7 @@ void ConstructionEnvironment::onAdd(EndifNode *node) {
 
   if (currNode == nullptr) {
     currNode = node;
+    setNodeId(node);
   } else {
     node->priorNodes += 1;
     callOnAdd(node);
@@ -104,6 +115,7 @@ void ConstructionEnvironment::onAdd(EndwhileNode *node) {
   }
   node->priorNodes = breakNodes.size();
   currNode = node;
+  setNodeId(node);
 }
 
 void ConstructionEnvironment::onAdd(BreakNode *node) {
@@ -114,8 +126,9 @@ void ConstructionEnvironment::onAdd(BreakNode *node) {
 
 void ConstructionEnvironment::onAdd(ContinueNode *node) {
   callOnAdd(node);
-  if (startwhileStack.back()->continueReturn != nullptr) {
-    node->next = startwhileStack.back()->continueReturn;
+  GraphNode *continueReturn = startwhileStack.back()->continueReturn;
+  if (continueReturn != nullptr) {
+    node->next = continueReturn;
   } else {
     continueListStack.back().push_back(node);
   }
@@ -128,6 +141,7 @@ void ConstructionEnvironment::onAdd(ContinueReturnNode *node) {
   for (int i = 0; i < continueNodes.size(); i++) {
     continueNodes[i]->next = node;
   }
+  setNodeId(node);
   StartwhileNode *startwhileNode = startwhileStack.back();
   startwhileNode->continueReturn = node;
   currNode = node;

@@ -30,7 +30,7 @@ void GraphVisualizer::visitNode(GraphNode *node) {
   if (adjacencyMatrix.find(node) == adjacencyMatrix.end()) {
     nodes.push_back(node);
     adjacencyMatrix.insert({node, std::vector<GraphNode *>(0)});
-    nodeNames.insert({node, node->getPrintableName()});
+    nodeNames.insert({node, node->getPrintableNameWithId()});
   }
   GraphNode *nextNode = node->getNextNode();
   node->visits += 1;

@@ -33,7 +33,9 @@ public:
   void onAdd(ReturnNode *node);
 
 private:
+  int currId;
   void callOnAdd(GraphNode *node);
+  void setNodeId(GraphNode *node);
 
   std::vector<IfNode *> ifStack;
   std::vector<std::vector<BasicNode *>> endifListStack;
