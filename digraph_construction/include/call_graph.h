@@ -12,6 +12,8 @@ public:
   virtual ~CallGraph();
   void addNode(std::string funcName);
   void addEdge(std::string caller, std::string callee);
+  std::vector<std::string>
+  deltaLocksetOrdering(std::vector<std::string> functions);
 
 private:
   std::string dbName = "eraser.db";
@@ -25,4 +27,8 @@ private:
   void deleteDatabase();
   void createTable(std::string query, std::string tableName);
   void createTables();
+
+  std::vector<std::string> traverseGraph(bool reverse = false);
+  std::vector<std::string> getNextNodes(std::vector<std::string> &order);
+  void markNodes(std::vector<std::string> &startNodes, bool reverse = false);
 };

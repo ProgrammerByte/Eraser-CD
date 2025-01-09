@@ -14,5 +14,4 @@ GraphNode *BasicNode::getNextNode() {
 
 void BasicNode::add(GraphNode *node) { next = node; }
 
-std::vector<GraphNode *> BasicNode::getForwardBranches() { return {next}; }
-std::vector<GraphNode *> BasicNode::getBackwardBranches() { return {}; }
+std::vector<GraphNode *> BasicNode::getNextNodes() { return {next}; }

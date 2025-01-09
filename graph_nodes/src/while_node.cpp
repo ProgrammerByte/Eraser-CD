@@ -20,7 +20,7 @@ void WhileNode::add(EndwhileNode *node) { endWhile = node; }
 
 std::string WhileNode::getPrintableName() { return "while"; }
 
-std::vector<GraphNode *> WhileNode::getForwardBranches() {
+std::vector<GraphNode *> WhileNode::getNextNodes() {
   std::vector<GraphNode *> result = {};
   if (whileNode != nullptr) {
     result.push_back(whileNode);
@@ -30,4 +30,3 @@ std::vector<GraphNode *> WhileNode::getForwardBranches() {
   }
   return result;
 }
-std::vector<GraphNode *> WhileNode::getBackwardBranches() { return {}; }

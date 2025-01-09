@@ -62,7 +62,7 @@ void OverApproximatedStaticEraser::insertNodeIntoQueue(
 void OverApproximatedStaticEraser::checkNextNodes(
     GraphNode *node, std::set<std::string> &locks) {
   // TODO - USE THESE ARE NEXT NODES TO VISIT
-  std::vector<GraphNode *> nextNodes = node->getForwardBranches();
+  std::vector<GraphNode *> nextNodes = node->getNextNodes();
   // if curr->priorNodesVisited == curr->priorNodes and curr->priorNodes > 1
   // then remove from stuck queue in theory though stuck queue not needed
   // for this case - only if paths are not all reachable which may not be

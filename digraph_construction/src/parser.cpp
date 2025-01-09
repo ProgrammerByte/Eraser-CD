@@ -2,6 +2,7 @@
 #include "call_graph.h"
 #include "construction_environment.h"
 #include "continue_node.h"
+#include "delta_lockset.h"
 #include "endif_node.h"
 #include "endwhile_node.h"
 #include "function_call_node.h"
@@ -513,6 +514,8 @@ int main() {
 
   OverApproximatedStaticEraser *staticEraser =
       new OverApproximatedStaticEraser();
+
+  DeltaLockset *deltaLockset = new DeltaLockset(callGraph);
 
   // staticEraser->testFunction(funcCfgs, "main");
 

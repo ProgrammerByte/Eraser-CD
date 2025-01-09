@@ -23,7 +23,7 @@ void IfNode::add(GraphNode *node) {
 
 std::string IfNode::getPrintableName() { return "if"; }
 
-std::vector<GraphNode *> IfNode::getForwardBranches() {
+std::vector<GraphNode *> IfNode::getNextNodes() {
   std::vector<GraphNode *> result = {};
   if (ifNode != nullptr) {
     result.push_back(ifNode);
@@ -33,4 +33,3 @@ std::vector<GraphNode *> IfNode::getForwardBranches() {
   }
   return result;
 }
-std::vector<GraphNode *> IfNode::getBackwardBranches() { return {}; }

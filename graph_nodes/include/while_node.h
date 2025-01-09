@@ -15,6 +15,5 @@ public:
   void add(EndwhileNode *node);
   std::string getPrintableName();
 
-  std::vector<GraphNode *> getForwardBranches();
-  std::vector<GraphNode *> getBackwardBranches();
+  std::vector<GraphNode *> getNextNodes();
 };
