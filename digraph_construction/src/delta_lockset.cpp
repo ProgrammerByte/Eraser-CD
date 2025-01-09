@@ -143,6 +143,8 @@ void DeltaLockset::handleFunction(GraphNode *startNode) {
   }
 }
 
+// TODO - startNode unlocks should be used by static eraser to remove from
+// current lockset before calling function
 void DeltaLockset::updateLocksets(
     std::unordered_map<std::string, StartNode *> funcCfgs,
     std::vector<std::string> changedFunctions) {
