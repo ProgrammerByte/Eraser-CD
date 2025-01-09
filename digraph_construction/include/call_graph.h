@@ -28,7 +28,7 @@ private:
   void createTable(std::string query, std::string tableName);
   void createTables();
 
-  std::vector<std::string> traverseGraph(bool reverse = false);
+  std::vector<std::string> traverseGraph(bool reverse);
   std::vector<std::string> getNextNodes(std::vector<std::string> &order);
-  void markNodes(std::vector<std::string> &startNodes, bool reverse = false);
+  void markNodes(std::vector<std::string> &startNodes, bool reverse);
 };

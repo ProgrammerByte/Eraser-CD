@@ -23,7 +23,7 @@
 #include <vector>
 
 struct CompareGraphNode {
-  bool operator()(const GraphNode *&a, const GraphNode *&b) {
+  bool operator()(const GraphNode *a, const GraphNode *b) {
     return a->id > b->id;
   }
 };
@@ -46,18 +46,30 @@ private:
 
   std::unordered_map<std::string, StartNode *> funcCfgs;
   std::string currFunc;
-  std::unordered_map<std::string, std::set<std::string>>
-      deltaLocksets; // TODO - ADD UNLOCKING TOO
-  std::unordered_map<GraphNode *, std::set<std::string>> nodeLockSets;
+  std::unordered_map<std::string,
+                     std::pair<std::set<std::string>, std::set<std::string>>>
+      deltaLocksets;
+  std::unordered_map<GraphNode *,
+                     std::pair<std::set<std::string>, std::set<std::string>>>
+      nodeLockSets;
 
-  void handleNode(GraphNode *node, std::set<std::string> &locks);
-  void handleNode(FunctionCallNode *node, std::set<std::string> &locks);
-  void handleNode(LockNode *node, std::set<std::string> &locks);
-  void handleNode(UnlockNode *node, std::set<std::string> &locks);
-  void handleNode(ReturnNode *node, std::set<std::string> &locks);
+  void
+  handleNode(FunctionCallNode *node,
+             std::pair<std::set<std::string>, std::set<std::string>> &locks);
+  void
+  handleNode(LockNode *node,
+             std::pair<std::set<std::string>, std::set<std::string>> &locks);
+  void
+  handleNode(UnlockNode *node,
+             std::pair<std::set<std::string>, std::set<std::string>> &locks);
+  void
+  handleNode(ReturnNode *node,
+             std::pair<std::set<std::string>, std::set<std::string>> &locks);
+
+  void
+  handleNode(GraphNode *node,
+             std::pair<std::set<std::string>, std::set<std::string>> &locks);
 
   void addNodeToQueue(GraphNode *startNode, GraphNode *nextNode);
   void handleFunction(GraphNode *startNode);
-  void checkNextNodes(GraphNode *node, std::set<std::string> &locks);
-  void checkNextNodes(FunctionCallNode *node, std::set<std::string> &locks);
 };

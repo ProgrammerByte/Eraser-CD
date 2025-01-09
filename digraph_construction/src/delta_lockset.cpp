@@ -5,31 +5,54 @@ DeltaLockset::DeltaLockset(CallGraph *callGraph) {
   this->callGraph = callGraph;
 }
 
-void DeltaLockset::handleNode(GraphNode *node, std::set<std::string> &locks){};
-
-void DeltaLockset::handleNode(FunctionCallNode *node,
-                              std::set<std::string> &locks) {
+void DeltaLockset::handleNode(
+    FunctionCallNode *node,
+    std::pair<std::set<std::string>, std::set<std::string>> &locks) {
   std::string functionName = node->functionName;
   if (deltaLocksets.find(functionName) != deltaLocksets.end()) {
-    locks *= deltaLocksets[functionName];
+    locks.first += deltaLocksets[functionName].first;
+    locks.second += deltaLocksets[functionName].second;
   }
 };
 
-void DeltaLockset::handleNode(LockNode *node, std::set<std::string> &locks) {
-  locks.insert(node->varName);
+void DeltaLockset::handleNode(
+    LockNode *node,
+    std::pair<std::set<std::string>, std::set<std::string>> &locks) {
+  locks.first.insert(node->varName);
+  locks.second.erase(node->varName);
 };
 
-void DeltaLockset::handleNode(UnlockNode *node, std::set<std::string> &locks) {
-  locks.erase(node->varName);
+void DeltaLockset::handleNode(
+    UnlockNode *node,
+    std::pair<std::set<std::string>, std::set<std::string>> &locks) {
+  locks.first.erase(node->varName);
+  locks.second.insert(node->varName);
 };
 
-void DeltaLockset::handleNode(ReturnNode *node, std::set<std::string> &locks) {
+void DeltaLockset::handleNode(
+    ReturnNode *node,
+    std::pair<std::set<std::string>, std::set<std::string>> &locks) {
   if (deltaLocksets.find(currFunc) == deltaLocksets.end()) {
     deltaLocksets.insert({currFunc, locks});
   } else {
-    deltaLocksets[currFunc] *= locks;
+    deltaLocksets[currFunc].first *= locks.first;
+    deltaLocksets[currFunc].second += locks.second;
   }
 }
+
+void DeltaLockset::handleNode(
+    GraphNode *node,
+    std::pair<std::set<std::string>, std::set<std::string>> &locks) {
+  if (auto *functionNode = dynamic_cast<FunctionCallNode *>(node)) {
+    handleNode(functionNode, locks);
+  } else if (auto *lockNode = dynamic_cast<LockNode *>(node)) {
+    handleNode(lockNode, locks);
+  } else if (auto *unlockNode = dynamic_cast<UnlockNode *>(node)) {
+    handleNode(unlockNode, locks);
+  } else if (auto *returnNode = dynamic_cast<ReturnNode *>(node)) {
+    handleNode(returnNode, locks);
+  }
+};
 
 void DeltaLockset::addNodeToQueue(GraphNode *startNode, GraphNode *nextNode) {
   if (startNode->id < nextNode->id) {
@@ -53,19 +76,23 @@ void DeltaLockset::handleFunction(GraphNode *startNode) {
     }
 
     GraphNode *node = forwardQueue.top();
-    std::set<std::string> lockSet = nodeLockSets[node];
+    std::pair<std::set<std::string>, std::set<std::string>> lockSet =
+        nodeLockSets[node];
     forwardQueue.pop();
 
     std::vector<GraphNode *> nextNodes = node->getNextNodes();
     for (GraphNode *nextNode : nextNodes) {
-      std::set<std::string> nextLockSet = lockSet;
+      std::pair<std::set<std::string>, std::set<std::string>> nextLockSet =
+          lockSet;
+
       handleNode(nextNode, nextLockSet);
 
       if (nodeLockSets.find(nextNode) == nodeLockSets.end()) {
         nodeLockSets.insert({nextNode, nextLockSet});
         addNodeToQueue(node, nextNode);
       } else {
-        nextLockSet *= nodeLockSets[nextNode];
+        nextLockSet.first *= nodeLockSets[nextNode].first;
+        nextLockSet.second += nodeLockSets[nextNode].second;
 
         if (nextLockSet != nodeLockSets[nextNode]) {
           nodeLockSets[nextNode] = nextLockSet;
@@ -87,8 +114,21 @@ void DeltaLockset::updateLocksets(
 
   // TODO - STORE NEIGHBORS AND PREVIOUS LOCKSETS SO WE KNOW THAT NO CHANGES
   // HAVE NEEDED HAVE CROPPED UP - OPTIMIZATION
+
   for (const std::string &funcName : ordering) {
     currFunc = funcName;
     handleFunction(funcCfgs[funcName]);
+
+    std::cout << "Function: " << funcName << std::endl;
+    std::cout << "Locks: ";
+    for (const std::string &lock : deltaLocksets[funcName].first) {
+      std::cout << lock << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "Unlocks: ";
+    for (const std::string &lock : deltaLocksets[funcName].second) {
+      std::cout << lock << " ";
+    }
+    std::cout << std::endl;
   }
 }

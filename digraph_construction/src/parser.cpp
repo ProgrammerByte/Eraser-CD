@@ -516,6 +516,7 @@ int main() {
       new OverApproximatedStaticEraser();
 
   DeltaLockset *deltaLockset = new DeltaLockset(callGraph);
+  deltaLockset->updateLocksets(funcCfgs, functions);
 
   // staticEraser->testFunction(funcCfgs, "main");
 
