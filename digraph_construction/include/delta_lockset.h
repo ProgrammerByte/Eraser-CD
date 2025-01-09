@@ -37,6 +37,7 @@ public:
                       std::vector<std::string> changedFunctions);
 
 private:
+  bool recursive;
   CallGraph *callGraph;
 
   std::priority_queue<GraphNode *, std::vector<GraphNode *>, CompareGraphNode>
@@ -53,20 +54,20 @@ private:
                      std::pair<std::set<std::string>, std::set<std::string>>>
       nodeLockSets;
 
-  void
+  bool
   handleNode(FunctionCallNode *node,
              std::pair<std::set<std::string>, std::set<std::string>> &locks);
-  void
+  bool
   handleNode(LockNode *node,
              std::pair<std::set<std::string>, std::set<std::string>> &locks);
-  void
+  bool
   handleNode(UnlockNode *node,
              std::pair<std::set<std::string>, std::set<std::string>> &locks);
-  void
+  bool
   handleNode(ReturnNode *node,
              std::pair<std::set<std::string>, std::set<std::string>> &locks);
 
-  void
+  bool
   handleNode(GraphNode *node,
              std::pair<std::set<std::string>, std::set<std::string>> &locks);
 
