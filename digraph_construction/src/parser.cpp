@@ -15,6 +15,7 @@
 #include "start_node.h"
 #include "startwhile_node.h"
 #include "thread_create_node.h"
+#include "thread_join_node.h"
 #include "unlock_node.h"
 #include "write_node.h"
 #include <clang-c/Index.h>
@@ -205,7 +206,7 @@ string getNthArg(CXCursor cursor, int targetArg, bool isPtr = false) {
       },
       &clientData);
 
-  if (clientData.argNum >= targetArg) {
+  if (clientData.argNum >= targetArg && !clientData.isPtr) {
     CXCursor argCursor = *clientData.argCursor;
 
     while (clang_getCursorKind(argCursor) == CXCursor_UnexposedExpr) {
@@ -243,47 +244,37 @@ void handleFunctionCall(CXCursor cursor, vector<GraphNode *> *nodesToAdd) {
       string funcName = getFuncName(cursor, called);
       bool global = isSharedVar(variableInfo);
       environment->onAdd(new ThreadCreateNode(funcName, varName, global));
-      if (global) {
+      if (global && varName != "") {
         environment->onAdd(new WriteNode(varName));
       }
       // TODO - MAYBE CHANGE EDGE TYPE HERE?? ONLY AN OPTIMISATION FOR DELTA
       // LOCKSETS
       callGraph->addEdge(caller, funcName);
     }
+  } else if (funcName == "pthread_join") {
+    string spelling = getNthArg(cursor, 1);
+    VariableInfo variableInfo = findVariableInfo(spelling);
+    string varName = getVariableName(spelling, cursor, variableInfo);
+    bool global = isSharedVar(variableInfo);
+    if (varName != "") {
+      environment->onAdd(new ThreadJoinNode(varName, global));
+    }
+    // TODO - USE SECOND ARG FOR RETURN VALUE, MAKE WRITE NODE AS NEEDED
+    // however can be generalised somewhat i.e. if passing ptr to func then
+    // treat as write. Okay for this algorithm
   } else if (funcName == "pthread_mutex_lock" ||
              funcName == "pthread_mutex_unlock") {
-    clang_visitChildren(
-        cursor,
-        [](CXCursor c, CXCursor parent, CXClientData clientData) {
-          CXCursorKind cursorKind = clang_getCursorKind(c);
-          if (clang_getCursorKind(c) == CXCursor_UnaryOperator) {
-            // when & is used
-            clang_visitChildren(
-                c,
-                [](CXCursor inner, CXCursor parent, CXClientData clientData) {
-                  if (clang_getCursorKind(inner) == CXCursor_DeclRefExpr) {
-                    string spelling =
-                        clang_getCString(clang_getCursorSpelling(inner));
-                    if (isSharedVar(spelling)) {
-                      string varName = getVariableName(spelling, inner);
-                      string funcName = *(string *)clientData;
-                      if (funcName == "pthread_mutex_lock") {
-                        environment->onAdd(new LockNode(varName));
-                      } else if (funcName == "pthread_mutex_unlock") {
-                        environment->onAdd(new UnlockNode(varName));
-                      }
-                    }
-                  }
-                  return CXChildVisit_Break;
-                },
-                clientData);
-            return CXChildVisit_Continue;
-          }
-
-          return CXChildVisit_Continue;
-        },
-        &funcName);
-  } else if (funcName != "pthread_join") {
+    string spelling = getNthArg(cursor, 1, true);
+    VariableInfo variableInfo = findVariableInfo(spelling);
+    if (isSharedVar(variableInfo)) {
+      string varName = getVariableName(spelling, cursor, variableInfo);
+      if (funcName == "pthread_mutex_lock") {
+        environment->onAdd(new LockNode(varName));
+      } else if (funcName == "pthread_mutex_unlock") {
+        environment->onAdd(new UnlockNode(varName));
+      }
+    }
+  } else {
     funcName = getFuncName(cursor, funcName);
     (*nodesToAdd).push_back(new FunctionCallNode(funcName));
     callGraph->addEdge(caller, funcName);
