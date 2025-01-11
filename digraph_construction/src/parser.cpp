@@ -135,6 +135,21 @@ VariableInfo findVariableInfo(string varName) {
   return variableInfo;
 }
 
+bool isSharedVar(string varName) {
+  struct VariableInfo variableInfo = findVariableInfo(varName);
+  return variableInfo.isStatic || variableInfo.scopeDepth == 0;
+}
+
+string getVariableName(string varName, CXCursor cursor) {
+  struct VariableInfo variableInfo = findVariableInfo(varName);
+  if (variableInfo.isStatic) {
+    string fileName = getCursorFilename(cursor);
+    varName = fileName + " " + to_string(variableInfo.scopeDepth) + " " +
+              to_string(variableInfo.scopeNum) + " " + varName;
+  }
+  return varName;
+}
+
 CXCursor getFirstChild(CXCursor cursor) {
   CXCursor firstChild = clang_getNullCursor();
 
@@ -151,13 +166,14 @@ CXCursor getFirstChild(CXCursor cursor) {
   return firstChild;
 }
 
-string getThirdArg(CXCursor cursor) {
+string getNthArg(CXCursor cursor, int targetArg) {
   struct ArgClientData {
+    int targetArg;
     int argNum;
     CXCursor *argCursor;
   };
 
-  struct ArgClientData clientData = {0, NULL};
+  struct ArgClientData clientData = {targetArg + 1, 0, NULL};
 
   clang_visitChildren(
       cursor,
@@ -167,7 +183,7 @@ string getThirdArg(CXCursor cursor) {
 
         argClientData->argNum++;
 
-        if (argClientData->argNum == 4) {
+        if (argClientData->argNum == argClientData->targetArg) {
           argClientData->argCursor = &c;
           return CXChildVisit_Break;
         }
@@ -176,7 +192,7 @@ string getThirdArg(CXCursor cursor) {
       },
       &clientData);
 
-  if (clientData.argNum >= 4) {
+  if (clientData.argNum >= targetArg + 1) {
     CXCursor argCursor = *clientData.argCursor;
 
     while (clang_getCursorKind(argCursor) == CXCursor_UnexposedExpr) {
@@ -206,8 +222,9 @@ void handleFunctionCall(CXCursor cursor, vector<GraphNode *> *nodesToAdd) {
   string funcName = clang_getCString(clang_getCursorSpelling(cursor));
 
   if (funcName == "pthread_create") {
-    string called = getThirdArg(cursor);
+    string called = getNthArg(cursor, 3);
     if (called != "") {
+      string varName = getVariableName(getNthArg(cursor, 1), cursor);
       string funcName = getFuncName(cursor, called);
       environment->onAdd(new ThreadCreateNode(funcName));
       // TODO - MAYBE CHANGE EDGE TYPE HERE?? ONLY AN OPTIMISATION FOR DELTA
@@ -226,22 +243,16 @@ void handleFunctionCall(CXCursor cursor, vector<GraphNode *> *nodesToAdd) {
                 c,
                 [](CXCursor inner, CXCursor parent, CXClientData clientData) {
                   if (clang_getCursorKind(inner) == CXCursor_DeclRefExpr) {
-                    string varName =
+                    string spelling =
                         clang_getCString(clang_getCursorSpelling(inner));
-                    struct VariableInfo variableInfo =
-                        findVariableInfo(varName);
-                    if (variableInfo.isStatic) {
-                      string fileName = getCursorFilename(inner);
-                      varName = fileName + " " +
-                                to_string(variableInfo.scopeDepth) + " " +
-                                to_string(variableInfo.scopeNum) + " " +
-                                varName;
-                    }
-                    string funcName = *(string *)clientData;
-                    if (funcName == "pthread_mutex_lock") {
-                      environment->onAdd(new LockNode(varName));
-                    } else if (funcName == "pthread_mutex_unlock") {
-                      environment->onAdd(new UnlockNode(varName));
+                    if (isSharedVar(spelling)) {
+                      string varName = getVariableName(spelling, inner);
+                      string funcName = *(string *)clientData;
+                      if (funcName == "pthread_mutex_lock") {
+                        environment->onAdd(new LockNode(varName));
+                      } else if (funcName == "pthread_mutex_unlock") {
+                        environment->onAdd(new UnlockNode(varName));
+                      }
                     }
                   }
                   return CXChildVisit_Break;
@@ -275,12 +286,10 @@ void classifyVariable(CXCursor cursor, LhsType lhsType,
   }
 
   struct VariableInfo variableInfo;
-  bool infoFound = false;
   bool isDeclaration =
       cursorKind == CXCursor_VarDecl || cursorKind == CXCursor_ParmDecl;
 
   if (isDeclaration) {
-    infoFound = true;
     variableInfo.isStatic =
         clang_Cursor_getStorageClass(cursor) == CX_SC_Static;
     variableInfo.scopeDepth = scopeDepth;
