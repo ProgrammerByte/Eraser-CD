@@ -135,19 +135,26 @@ VariableInfo findVariableInfo(string varName) {
   return variableInfo;
 }
 
-bool isSharedVar(string varName) {
-  struct VariableInfo variableInfo = findVariableInfo(varName);
+bool isSharedVar(struct VariableInfo variableInfo) {
   return variableInfo.isStatic || variableInfo.scopeDepth == 0;
 }
 
-string getVariableName(string varName, CXCursor cursor) {
-  struct VariableInfo variableInfo = findVariableInfo(varName);
-  if (variableInfo.isStatic) {
+bool isSharedVar(string varName) {
+  return isSharedVar(findVariableInfo(varName));
+}
+
+string getVariableName(string varName, CXCursor cursor,
+                       struct VariableInfo variableInfo) {
+  if (variableInfo.isStatic || variableInfo.scopeDepth > 0) {
     string fileName = getCursorFilename(cursor);
     varName = fileName + " " + to_string(variableInfo.scopeDepth) + " " +
               to_string(variableInfo.scopeNum) + " " + varName;
   }
   return varName;
+}
+
+string getVariableName(string varName, CXCursor cursor) {
+  return getVariableName(varName, cursor, findVariableInfo(varName));
 }
 
 CXCursor getFirstChild(CXCursor cursor) {
@@ -178,6 +185,9 @@ string getNthArg(CXCursor cursor, int targetArg) {
   clang_visitChildren(
       cursor,
       [](CXCursor c, CXCursor parent, CXClientData clientData) {
+        if (clang_getCursorKind(c) == CXCursor_UnaryOperator) {
+          return CXChildVisit_Recurse;
+        }
         struct ArgClientData *argClientData =
             reinterpret_cast<struct ArgClientData *>(clientData);
 
@@ -224,9 +234,12 @@ void handleFunctionCall(CXCursor cursor, vector<GraphNode *> *nodesToAdd) {
   if (funcName == "pthread_create") {
     string called = getNthArg(cursor, 3);
     if (called != "") {
-      string varName = getVariableName(getNthArg(cursor, 1), cursor);
+      string spelling = getNthArg(cursor, 1);
+      VariableInfo variableInfo = findVariableInfo(spelling);
+      string varName = getVariableName(spelling, cursor, variableInfo);
       string funcName = getFuncName(cursor, called);
-      environment->onAdd(new ThreadCreateNode(funcName));
+      environment->onAdd(
+          new ThreadCreateNode(funcName, varName, isSharedVar(variableInfo)));
       // TODO - MAYBE CHANGE EDGE TYPE HERE?? ONLY AN OPTIMISATION FOR DELTA
       // LOCKSETS
       callGraph->addEdge(caller, funcName);
