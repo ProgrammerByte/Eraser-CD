@@ -65,7 +65,7 @@ struct ActiveThreads
 // Q: (tid -> pending writes)
 struct QueuedWrites
     : public std::unordered_map<std::string, std::set<std::string>> {
-  std::set<std::string> pendingWrites() {
+  std::set<std::string> values() {
     std::set<std::string> result;
     for (auto &pair : *this) {
       result += pair.second;
@@ -149,7 +149,8 @@ struct EraserSets {
   std::set<std::string> internalReads;
   std::set<std::string> externalWrites;
   std::set<std::string> internalWrites;
-  std::set<std::string> shared;
+  std::set<std::string> internalShared;
+  std::set<std::string> externalShared;
   std::set<std::string> sharedModified;
   QueuedWrites queuedWrites;
 
@@ -162,7 +163,9 @@ struct EraserSets {
            externalReads == other.externalReads &&
            internalReads == other.internalReads &&
            externalWrites == other.externalWrites &&
-           internalWrites == other.internalWrites && shared == other.shared &&
+           internalWrites == other.internalWrites &&
+           internalShared == other.internalShared &&
+           externalShared == other.externalShared &&
            sharedModified == other.sharedModified &&
            queuedWrites == other.queuedWrites &&
            finishedThreads == other.finishedThreads &&
@@ -197,6 +200,8 @@ private:
   bool recursiveFunctionCall(std::string functionName, EraserSets &sets,
                              bool fromThread);
   void sharedVariableAccessed(std::string varName, EraserSets &sets);
+
+  void threadFinished(std::string varName, EraserSets &sets);
 
   bool handleNode(FunctionCallNode *node, EraserSets &sets);
   bool handleNode(ThreadCreateNode *node, EraserSets &sets);
