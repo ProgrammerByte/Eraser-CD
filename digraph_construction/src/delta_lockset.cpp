@@ -5,70 +5,87 @@ DeltaLockset::DeltaLockset(CallGraph *callGraph) {
   this->callGraph = callGraph;
 }
 
-bool DeltaLockset::handleNode(
-    FunctionCallNode *node,
-    std::pair<std::set<std::string>, std::set<std::string>> &locks) {
+bool DeltaLockset::handleNode(FunctionCallNode *node, EraserSets &sets) {
   std::string functionName = node->functionName;
   if (functionName == currFunc) {
     GraphNode *startNode = funcCfgs[currFunc];
-    std::pair<std::set<std::string>, std::set<std::string>> nextLockSet =
-        nodeLockSets[startNode];
-    nextLockSet.first *= locks.first;
-    nextLockSet.second += locks.second;
-    if (nextLockSet != nodeLockSets[startNode] || !recursive) {
-      nodeLockSets[startNode] = nextLockSet;
+    EraserSets nextSets = nodeSets[startNode];
+    nextSets.locks *= sets.locks;
+    nextSets.unlocks += sets.unlocks;
+    if (nextSets != nodeSets[startNode] || !recursive) {
+      nodeSets[startNode] = nextSets;
       backwardQueue.push_back(startNode);
     }
     if (!recursive) {
       return false;
     }
   }
-  if (deltaLocksets.find(functionName) != deltaLocksets.end()) {
-    locks.first += deltaLocksets[functionName].first;
-    locks.second += deltaLocksets[functionName].second;
+  if (functionSets.find(functionName) != functionSets.end()) {
+    sets.locks += functionSets[functionName].locks;
+    sets.unlocks += functionSets[functionName].unlocks;
   }
   return true;
 };
 
-bool DeltaLockset::handleNode(
-    LockNode *node,
-    std::pair<std::set<std::string>, std::set<std::string>> &locks) {
-  locks.first.insert(node->varName);
-  locks.second.erase(node->varName);
+bool DeltaLockset::handleNode(ThreadCreateNode *node, EraserSets &sets) {
+  // TODO
   return true;
 };
 
-bool DeltaLockset::handleNode(
-    UnlockNode *node,
-    std::pair<std::set<std::string>, std::set<std::string>> &locks) {
-  locks.first.erase(node->varName);
-  locks.second.insert(node->varName);
+bool DeltaLockset::handleNode(ThreadJoinNode *node, EraserSets &sets) {
+  // TODO
   return true;
 };
 
-bool DeltaLockset::handleNode(
-    ReturnNode *node,
-    std::pair<std::set<std::string>, std::set<std::string>> &locks) {
-  if (deltaLocksets.find(currFunc) == deltaLocksets.end()) {
-    deltaLocksets.insert({currFunc, locks});
+bool DeltaLockset::handleNode(LockNode *node, EraserSets &sets) {
+  sets.locks.insert(node->varName);
+  sets.unlocks.erase(node->varName);
+  return true;
+};
+
+bool DeltaLockset::handleNode(UnlockNode *node, EraserSets &sets) {
+  sets.locks.erase(node->varName);
+  sets.unlocks.insert(node->varName);
+  return true;
+};
+
+bool DeltaLockset::handleNode(ReadNode *node, EraserSets &sets) {
+  // TODO
+  return true;
+};
+
+bool DeltaLockset::handleNode(WriteNode *node, EraserSets &sets) {
+  // TODO
+  return true;
+};
+
+bool DeltaLockset::handleNode(ReturnNode *node, EraserSets &sets) {
+  if (functionSets.find(currFunc) == functionSets.end()) {
+    functionSets.insert({currFunc, sets});
   } else {
-    deltaLocksets[currFunc].first *= locks.first;
-    deltaLocksets[currFunc].second += locks.second;
+    functionSets[currFunc].locks *= sets.locks;
+    functionSets[currFunc].unlocks += sets.unlocks;
   }
   return true;
 }
 
-bool DeltaLockset::handleNode(
-    GraphNode *node,
-    std::pair<std::set<std::string>, std::set<std::string>> &locks) {
+bool DeltaLockset::handleNode(GraphNode *node, EraserSets &sets) {
   if (auto *functionNode = dynamic_cast<FunctionCallNode *>(node)) {
-    return handleNode(functionNode, locks);
+    return handleNode(functionNode, sets);
+  } else if (auto *threadCreateNode = dynamic_cast<ThreadCreateNode *>(node)) {
+    return handleNode(threadCreateNode, sets);
+  } else if (auto *threadJoinNode = dynamic_cast<ThreadJoinNode *>(node)) {
+    return handleNode(threadJoinNode, sets);
   } else if (auto *lockNode = dynamic_cast<LockNode *>(node)) {
-    return handleNode(lockNode, locks);
+    return handleNode(lockNode, sets);
   } else if (auto *unlockNode = dynamic_cast<UnlockNode *>(node)) {
-    return handleNode(unlockNode, locks);
+    return handleNode(unlockNode, sets);
+  } else if (auto *readNode = dynamic_cast<ReadNode *>(node)) {
+    return handleNode(readNode, sets);
+  } else if (auto *writeNode = dynamic_cast<WriteNode *>(node)) {
+    return handleNode(writeNode, sets);
   } else if (auto *returnNode = dynamic_cast<ReturnNode *>(node)) {
-    return handleNode(returnNode, locks);
+    return handleNode(returnNode, sets);
   }
   return true;
 };
@@ -83,8 +100,8 @@ void DeltaLockset::addNodeToQueue(GraphNode *startNode, GraphNode *nextNode) {
 
 void DeltaLockset::handleFunction(GraphNode *startNode) {
   forwardQueue.push(startNode);
-  nodeLockSets = {};
-  nodeLockSets.insert({startNode, {}});
+  nodeSets = {};
+  nodeSets.insert({startNode, {}});
   recursive = false;
   bool started = false;
   int lastId = -1;
@@ -99,8 +116,7 @@ void DeltaLockset::handleFunction(GraphNode *startNode) {
     }
 
     GraphNode *node = forwardQueue.top();
-    std::pair<std::set<std::string>, std::set<std::string>> lockSet =
-        nodeLockSets[node];
+    EraserSets lockSet = nodeSets[node];
     forwardQueue.pop();
     if (node->id == lastId) {
       continue;
@@ -117,21 +133,20 @@ void DeltaLockset::handleFunction(GraphNode *startNode) {
 
     std::vector<GraphNode *> nextNodes = node->getNextNodes();
     for (GraphNode *nextNode : nextNodes) {
-      std::pair<std::set<std::string>, std::set<std::string>> nextLockSet =
-          lockSet;
+      EraserSets nextSets = lockSet;
 
-      if (handleNode(nextNode, nextLockSet)) {
-        if (nodeLockSets.find(nextNode) == nodeLockSets.end()) {
-          nodeLockSets.insert({nextNode, nextLockSet});
+      if (handleNode(nextNode, nextSets)) {
+        if (nodeSets.find(nextNode) == nodeSets.end()) {
+          nodeSets.insert({nextNode, nextSets});
           addNodeToQueue(node, nextNode);
         } else {
-          nextLockSet.first *= nodeLockSets[nextNode].first;
-          nextLockSet.second += nodeLockSets[nextNode].second;
+          nextSets.locks *= nodeSets[nextNode].locks;
+          nextSets.unlocks += nodeSets[nextNode].unlocks;
 
-          if (nextLockSet != nodeLockSets[nextNode] ||
+          if (nextSets != nodeSets[nextNode] ||
               (recursive &&
                recursiveVisit.find(nextNode) == recursiveVisit.end())) {
-            nodeLockSets[nextNode] = nextLockSet;
+            nodeSets[nextNode] = nextSets;
             addNodeToQueue(node, nextNode);
           }
         }
@@ -149,7 +164,7 @@ void DeltaLockset::updateLocksets(
     std::unordered_map<std::string, StartNode *> funcCfgs,
     std::vector<std::string> changedFunctions) {
   this->funcCfgs = funcCfgs;
-  deltaLocksets = {};
+  functionSets = {};
 
   std::vector<std::string> ordering =
       callGraph->deltaLocksetOrdering(changedFunctions);
@@ -163,12 +178,12 @@ void DeltaLockset::updateLocksets(
 
     std::cout << "Function: " << funcName << std::endl;
     std::cout << "Locks: ";
-    for (const std::string &lock : deltaLocksets[funcName].first) {
+    for (const std::string &lock : functionSets[funcName].locks) {
       std::cout << lock << " ";
     }
     std::cout << std::endl;
     std::cout << "Unlocks: ";
-    for (const std::string &lock : deltaLocksets[funcName].second) {
+    for (const std::string &lock : functionSets[funcName].unlocks) {
       std::cout << lock << " ";
     }
     std::cout << std::endl;

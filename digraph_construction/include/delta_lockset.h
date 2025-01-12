@@ -11,6 +11,7 @@
 #include "return_node.h"
 #include "start_node.h"
 #include "thread_create_node.h"
+#include "thread_join_node.h"
 #include "unlock_node.h"
 #include "while_node.h"
 #include "write_node.h"
@@ -27,6 +28,19 @@ struct CompareGraphNode {
     return a->id > b->id;
   }
 };
+
+struct EraserSets {
+  std::set<std::string> locks;
+  std::set<std::string> unlocks;
+};
+
+inline bool operator==(const EraserSets &lhs, const EraserSets &rhs) {
+  return lhs.locks == rhs.locks && lhs.unlocks == rhs.unlocks;
+}
+
+inline bool operator!=(const EraserSets &lhs, const EraserSets &rhs) {
+  return !(lhs == rhs);
+}
 
 class DeltaLockset {
 public:
@@ -47,29 +61,18 @@ private:
 
   std::unordered_map<std::string, StartNode *> funcCfgs;
   std::string currFunc;
-  std::unordered_map<std::string,
-                     std::pair<std::set<std::string>, std::set<std::string>>>
-      deltaLocksets;
-  std::unordered_map<GraphNode *,
-                     std::pair<std::set<std::string>, std::set<std::string>>>
-      nodeLockSets;
+  std::unordered_map<std::string, EraserSets> functionSets;
+  std::unordered_map<GraphNode *, EraserSets> nodeSets;
 
-  bool
-  handleNode(FunctionCallNode *node,
-             std::pair<std::set<std::string>, std::set<std::string>> &locks);
-  bool
-  handleNode(LockNode *node,
-             std::pair<std::set<std::string>, std::set<std::string>> &locks);
-  bool
-  handleNode(UnlockNode *node,
-             std::pair<std::set<std::string>, std::set<std::string>> &locks);
-  bool
-  handleNode(ReturnNode *node,
-             std::pair<std::set<std::string>, std::set<std::string>> &locks);
-
-  bool
-  handleNode(GraphNode *node,
-             std::pair<std::set<std::string>, std::set<std::string>> &locks);
+  bool handleNode(FunctionCallNode *node, EraserSets &sets);
+  bool handleNode(ThreadCreateNode *node, EraserSets &sets);
+  bool handleNode(ThreadJoinNode *node, EraserSets &sets);
+  bool handleNode(LockNode *node, EraserSets &sets);
+  bool handleNode(UnlockNode *node, EraserSets &sets);
+  bool handleNode(ReadNode *node, EraserSets &sets);
+  bool handleNode(WriteNode *node, EraserSets &sets);
+  bool handleNode(ReturnNode *node, EraserSets &sets);
+  bool handleNode(GraphNode *node, EraserSets &sets);
 
   void addNodeToQueue(GraphNode *startNode, GraphNode *nextNode);
   void handleFunction(GraphNode *startNode);
