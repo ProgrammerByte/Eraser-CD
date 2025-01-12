@@ -404,5 +404,71 @@ void DeltaLockset::updateLocksets(
       std::cout << lock << " ";
     }
     std::cout << std::endl;
+
+    std::cout << "External Reads: ";
+    for (const std::string &read : functionSets[funcName].externalReads) {
+      std::cout << read << " ";
+    }
+    std::cout << std::endl;
+
+    std::cout << "Internal Reads: ";
+    for (const std::string &read : functionSets[funcName].internalReads) {
+      std::cout << read << " ";
+    }
+    std::cout << std::endl;
+
+    std::cout << "External Writes: ";
+    for (const std::string &write : functionSets[funcName].externalWrites) {
+      std::cout << write << " ";
+    }
+    std::cout << std::endl;
+
+    std::cout << "Internal Writes: ";
+    for (const std::string &write : functionSets[funcName].internalWrites) {
+      std::cout << write << " ";
+    }
+    std::cout << std::endl;
+
+    std::cout << "Internal Shared: ";
+    for (const std::string &shared : functionSets[funcName].internalShared) {
+      std::cout << shared << " ";
+    }
+    std::cout << std::endl;
+
+    std::cout << "External Shared: ";
+    for (const std::string &shared : functionSets[funcName].externalShared) {
+      std::cout << shared << " ";
+    }
+    std::cout << std::endl;
+
+    std::cout << "Shared Modified: ";
+    for (const std::string &shared : functionSets[funcName].sharedModified) {
+      std::cout << shared << " ";
+    }
+    std::cout << std::endl;
+
+    std::cout << "Queued Writes: ";
+    for (const auto &pair : functionSets[funcName].queuedWrites) {
+      std::cout << pair.first << ": ";
+      for (const std::string &write : pair.second) {
+        std::cout << write << " ";
+      }
+    }
+    std::cout << std::endl;
+
+    std::cout << "Active Threads: ";
+    for (const auto &pair : functionSets[funcName].activeThreads) {
+      std::cout << pair.first << ": ";
+      for (const std::string &tid : pair.second) {
+        std::cout << tid << " ";
+      }
+    }
+    std::cout << std::endl;
+
+    std::cout << "Finished Threads: ";
+    for (const std::string &tid : functionSets[funcName].finishedThreads) {
+      std::cout << tid << " ";
+    }
+    std::cout << std::endl;
   }
 }
