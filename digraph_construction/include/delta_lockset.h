@@ -30,9 +30,81 @@ struct CompareGraphNode {
   }
 };
 
-struct variableLocks
+// varName -> tid
+struct ActiveThreads
     : public std::unordered_map<std::string, std::set<std::string>> {
-  variableLocks &operator*=(const variableLocks &other) {
+  ActiveThreads &operator+=(const ActiveThreads &other) {
+    for (auto &pair : other) {
+      if (find(pair.first) != end()) {
+        at(pair.first) += pair.second;
+      } else {
+        insert(pair);
+      }
+    }
+    return *this;
+  }
+
+  ActiveThreads operator+(const ActiveThreads &other) const {
+    ActiveThreads result = *this;
+    return result += other;
+  }
+
+  ActiveThreads &operator-=(const std::set<std::string> &other) {
+    for (auto &varName : other) {
+      erase(varName);
+    }
+    return *this;
+  }
+
+  ActiveThreads operator-(const std::set<std::string> &other) const {
+    ActiveThreads result = *this;
+    return result -= other;
+  }
+};
+
+// Q: (tid -> pending writes)
+struct QueuedWrites
+    : public std::unordered_map<std::string, std::set<std::string>> {
+  std::set<std::string> pendingWrites() {
+    std::set<std::string> result;
+    for (auto &pair : *this) {
+      result += pair.second;
+    }
+    return result;
+  }
+
+  QueuedWrites &operator+=(const QueuedWrites &other) {
+    for (auto &pair : other) {
+      if (find(pair.first) != end()) {
+        at(pair.first) += pair.second;
+      } else {
+        insert(pair);
+      }
+    }
+    return *this;
+  }
+
+  QueuedWrites operator+(const QueuedWrites &other) const {
+    QueuedWrites result = *this;
+    return result += other;
+  }
+
+  QueuedWrites &operator-=(const std::set<std::string> &other) {
+    for (auto &tid : other) {
+      erase(tid);
+    }
+    return *this;
+  }
+
+  QueuedWrites operator-(const std::set<std::string> &other) const {
+    QueuedWrites result = *this;
+    return result -= other;
+  }
+};
+
+struct VariableLocks
+    : public std::unordered_map<std::string, std::set<std::string>> {
+  VariableLocks &operator*=(const VariableLocks &other) {
     for (auto &pair : other) {
       if (find(pair.first) != end()) {
         // If the key exists in both sets, intersect the sets
@@ -45,15 +117,15 @@ struct variableLocks
     return *this;
   }
 
-  variableLocks operator*(const variableLocks &other) const {
-    variableLocks result = *this;
+  VariableLocks operator*(const VariableLocks &other) const {
+    VariableLocks result = *this;
     return result *= other;
   }
 
-  variableLocks &operator+=(const variableLocks &other) {
+  VariableLocks &operator+=(const VariableLocks &other) {
     for (auto &pair : *this) {
       if (other.find(pair.first) != end()) {
-        pair.second *= other.at(pair.first);
+        pair.second += other.at(pair.first);
       } else {
         erase(pair.first);
       }
@@ -61,23 +133,44 @@ struct variableLocks
     return *this;
   }
 
-  variableLocks operator+(const variableLocks &other) const {
-    variableLocks result = *this;
+  VariableLocks operator+(const VariableLocks &other) const {
+    VariableLocks result = *this;
     return result += other;
   }
 };
+
 struct EraserSets {
+  // currently held locks
   std::set<std::string> locks;
   std::set<std::string> unlocks;
+
+  // state machine state representation
+  std::set<std::string> externalReads;
+  std::set<std::string> internalReads;
+  std::set<std::string> externalWrites;
+  std::set<std::string> internalWrites;
+  std::set<std::string> shared;
+  std::set<std::string> sharedModified;
+  QueuedWrites queuedWrites;
+
+  // threads
+  std::set<std::string> finishedThreads;
+  ActiveThreads activeThreads;
+
+  bool operator==(const EraserSets &other) const {
+    return locks == other.locks && unlocks == other.unlocks &&
+           externalReads == other.externalReads &&
+           internalReads == other.internalReads &&
+           externalWrites == other.externalWrites &&
+           internalWrites == other.internalWrites && shared == other.shared &&
+           sharedModified == other.sharedModified &&
+           queuedWrites == other.queuedWrites &&
+           finishedThreads == other.finishedThreads &&
+           activeThreads == other.activeThreads;
+  }
+
+  bool operator!=(const EraserSets &other) const { return !(*this == other); }
 };
-
-inline bool operator==(const EraserSets &lhs, const EraserSets &rhs) {
-  return lhs.locks == rhs.locks && lhs.unlocks == rhs.unlocks;
-}
-
-inline bool operator!=(const EraserSets &lhs, const EraserSets &rhs) {
-  return !(lhs == rhs);
-}
 
 class DeltaLockset {
 public:

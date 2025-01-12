@@ -120,7 +120,7 @@ void DeltaLockset::addNodeToQueue(GraphNode *startNode, GraphNode *nextNode) {
 void DeltaLockset::handleFunction(GraphNode *startNode) {
   forwardQueue.push(startNode);
   nodeSets = {};
-  nodeSets.insert({startNode, {{}, {}}});
+  nodeSets.insert({startNode, {{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}}});
   recursive = false;
   bool started = false;
   int lastId = -1;
