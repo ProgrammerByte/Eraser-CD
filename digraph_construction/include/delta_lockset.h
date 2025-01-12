@@ -9,6 +9,7 @@
 #include "lock_node.h"
 #include "read_node.h"
 #include "return_node.h"
+#include "set_operations.h"
 #include "start_node.h"
 #include "thread_create_node.h"
 #include "thread_join_node.h"
@@ -29,6 +30,42 @@ struct CompareGraphNode {
   }
 };
 
+struct variableLocks
+    : public std::unordered_map<std::string, std::set<std::string>> {
+  variableLocks &operator*=(const variableLocks &other) {
+    for (auto &pair : other) {
+      if (find(pair.first) != end()) {
+        // If the key exists in both sets, intersect the sets
+        at(pair.first) *= pair.second;
+      } else {
+        // If the key only exists in the other set, add it to this set
+        insert(pair);
+      }
+    }
+    return *this;
+  }
+
+  variableLocks operator*(const variableLocks &other) const {
+    variableLocks result = *this;
+    return result *= other;
+  }
+
+  variableLocks &operator+=(const variableLocks &other) {
+    for (auto &pair : *this) {
+      if (other.find(pair.first) != end()) {
+        pair.second *= other.at(pair.first);
+      } else {
+        erase(pair.first);
+      }
+    }
+    return *this;
+  }
+
+  variableLocks operator+(const variableLocks &other) const {
+    variableLocks result = *this;
+    return result += other;
+  }
+};
 struct EraserSets {
   std::set<std::string> locks;
   std::set<std::string> unlocks;
@@ -63,6 +100,10 @@ private:
   std::string currFunc;
   std::unordered_map<std::string, EraserSets> functionSets;
   std::unordered_map<GraphNode *, EraserSets> nodeSets;
+
+  bool recursiveFunctionCall(std::string functionName, EraserSets &sets,
+                             bool fromThread);
+  void sharedVariableAccessed(std::string varName, EraserSets &sets);
 
   bool handleNode(FunctionCallNode *node, EraserSets &sets);
   bool handleNode(ThreadCreateNode *node, EraserSets &sets);

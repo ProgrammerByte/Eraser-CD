@@ -5,30 +5,51 @@ DeltaLockset::DeltaLockset(CallGraph *callGraph) {
   this->callGraph = callGraph;
 }
 
-bool DeltaLockset::handleNode(FunctionCallNode *node, EraserSets &sets) {
-  std::string functionName = node->functionName;
+bool DeltaLockset::recursiveFunctionCall(std::string functionName,
+                                         EraserSets &sets,
+                                         bool fromThread = false) {
   if (functionName == currFunc) {
     GraphNode *startNode = funcCfgs[currFunc];
     EraserSets nextSets = nodeSets[startNode];
-    nextSets.locks *= sets.locks;
-    nextSets.unlocks += sets.unlocks;
+    if (fromThread) {
+      // nothing yet
+    } else {
+      nextSets.locks *= sets.locks;
+      nextSets.unlocks += sets.unlocks;
+    }
     if (nextSets != nodeSets[startNode] || !recursive) {
       nodeSets[startNode] = nextSets;
       backwardQueue.push_back(startNode);
     }
     if (!recursive) {
-      return false;
+      return true;
     }
   }
+  return false;
+}
+
+bool DeltaLockset::handleNode(FunctionCallNode *node, EraserSets &sets) {
+  std::string functionName = node->functionName;
+  if (recursiveFunctionCall(functionName, sets)) {
+    return false;
+  }
   if (functionSets.find(functionName) != functionSets.end()) {
+    sets.locks -= functionSets[functionName].unlocks;
     sets.locks += functionSets[functionName].locks;
+    sets.unlocks -= functionSets[functionName].locks;
     sets.unlocks += functionSets[functionName].unlocks;
   }
   return true;
 };
 
 bool DeltaLockset::handleNode(ThreadCreateNode *node, EraserSets &sets) {
-  // TODO
+  if (node->global) {
+    // sharedVariableAccessed(node->varName, sets);
+  }
+  std::string functionName = node->functionName;
+  if (recursiveFunctionCall(node->functionName, sets, true)) {
+    return false;
+  }
   return true;
 };
 
@@ -50,12 +71,10 @@ bool DeltaLockset::handleNode(UnlockNode *node, EraserSets &sets) {
 };
 
 bool DeltaLockset::handleNode(ReadNode *node, EraserSets &sets) {
-  // TODO
   return true;
 };
 
 bool DeltaLockset::handleNode(WriteNode *node, EraserSets &sets) {
-  // TODO
   return true;
 };
 
@@ -101,7 +120,7 @@ void DeltaLockset::addNodeToQueue(GraphNode *startNode, GraphNode *nextNode) {
 void DeltaLockset::handleFunction(GraphNode *startNode) {
   forwardQueue.push(startNode);
   nodeSets = {};
-  nodeSets.insert({startNode, {}});
+  nodeSets.insert({startNode, {{}, {}}});
   recursive = false;
   bool started = false;
   int lastId = -1;
@@ -116,7 +135,7 @@ void DeltaLockset::handleFunction(GraphNode *startNode) {
     }
 
     GraphNode *node = forwardQueue.top();
-    EraserSets lockSet = nodeSets[node];
+    EraserSets eraserSet = nodeSets[node];
     forwardQueue.pop();
     if (node->id == lastId) {
       continue;
@@ -133,7 +152,7 @@ void DeltaLockset::handleFunction(GraphNode *startNode) {
 
     std::vector<GraphNode *> nextNodes = node->getNextNodes();
     for (GraphNode *nextNode : nextNodes) {
-      EraserSets nextSets = lockSet;
+      EraserSets nextSets = eraserSet;
 
       if (handleNode(nextNode, nextSets)) {
         if (nodeSets.find(nextNode) == nodeSets.end()) {
