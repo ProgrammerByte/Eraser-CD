@@ -4,8 +4,8 @@ project(digraph_construction VERSION 1.0)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-file(GLOB DIGRAPH_SRC CONFIGURE_DEPENDS src/*.cpp)
-include_directories("/usr/lib/llvm-14/include")
+file(GLOB DIGRAPH_SRC CONFIGURE_DEPENDS src/*.cpp database/src/*.cpp)
+include_directories("/usr/lib/llvm-14/include" ./include ./database/include)
 link_directories("/usr/lib/llvm-14/lib")
 
 find_package(SQLite3 REQUIRED)

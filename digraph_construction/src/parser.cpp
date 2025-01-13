@@ -2,6 +2,7 @@
 #include "call_graph.h"
 #include "construction_environment.h"
 #include "continue_node.h"
+#include "database.h"
 #include "delta_lockset.h"
 #include "endif_node.h"
 #include "endwhile_node.h"
@@ -539,7 +540,8 @@ int main() {
   VisitorData initialData = {0, {}, LHS_NONE};
 
   environment = new ConstructionEnvironment();
-  callGraph = new CallGraph();
+  Database *db = new Database();
+  callGraph = new CallGraph(db);
   clang_visitChildren(cursor, visitor, &initialData);
   GraphVisualizer *visualizer = new GraphVisualizer();
   visualizer->visualizeGraph(funcCfgs[functions[1]]);
