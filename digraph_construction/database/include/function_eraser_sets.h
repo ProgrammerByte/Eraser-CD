@@ -19,8 +19,14 @@ public:
   void updateCurrEraserSets(EraserSets &sets);
   void saveCurrEraserSets();
   void startNewFunction(std::string funcName);
+  void markFunctionEraserSetsAsOld();
 
 private:
+  bool checkCurrFuncInDb();
+  void insertCurrSetsIntoDb();
+  void deleteCurrFuncFromDb();
+  EraserSets extractSetsFromDb(std::string funcName);
+
   Database *db;
   std::unordered_map<std::string, EraserSets> functionSets;
   std::string currFunc;

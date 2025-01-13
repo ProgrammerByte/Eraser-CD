@@ -64,20 +64,29 @@ void Database::createTables() {
     CREATE TABLE adjacency_matrix (
       funcname1 TEXT,
       funcname2 TEXT,
-      FOREIGN KEY (funcname1) REFERENCES nodes(funcname),
-      FOREIGN KEY (funcname2) REFERENCES nodes(funcname),
+      FOREIGN KEY (funcname1) REFERENCES nodes(funcname) ON DELETE CASCADE,
+      FOREIGN KEY (funcname2) REFERENCES nodes(funcname) ON DELETE CASCADE,
       UNIQUE(funcname1, funcname2)
     );
   )",
               "adjacency_matrix");
 
   createTable(R"(
+    CREATE TABLE function_eraser_sets (
+      funcname TEXT PRIMARY KEY,
+      locks_changed BOOLEAN DEFAULT TRUE,
+      vars_changed BOOLEAN DEFAULT TRUE
+    );
+  )",
+              "function_eraser_sets");
+
+  createTable(R"(
     CREATE TABLE function_locks (
       funcname TEXT,
-      lock TEXT,
+      varname TEXT,
       type TEXT CHECK(type IN ('lock', 'unlock')),
-      FOREIGN KEY (funcname) REFERENCES nodes(funcname),
-      UNIQUE(funcname, lock)
+      FOREIGN KEY (funcname) REFERENCES function_eraser_sets(funcname) ON DELETE CASCADE,
+      UNIQUE(funcname, varname)
     );
   )",
               "function_locks");
@@ -95,7 +104,7 @@ void Database::createTables() {
         'internal_shared',
         'shared_modified'
       )),
-      FOREIGN KEY (funcname) REFERENCES nodes(funcname),
+      FOREIGN KEY (funcname) REFERENCES function_eraser_sets(funcname) ON DELETE CASCADE,
       UNIQUE(funcname, varname, type)
     );
   )",
@@ -106,7 +115,7 @@ void Database::createTables() {
       funcname TEXT,
       tid TEXT,
       varname TEXT,
-      FOREIGN KEY (funcname) REFERENCES nodes(funcname),
+      FOREIGN KEY (funcname) REFERENCES function_eraser_sets(funcname) ON DELETE CASCADE,
       UNIQUE(funcname, tid, varname)
     );
   )",
@@ -116,7 +125,7 @@ void Database::createTables() {
     CREATE TABLE finished_threads (
       funcname TEXT,
       varname TEXT,
-      FOREIGN KEY (funcname) REFERENCES nodes(funcname),
+      FOREIGN KEY (funcname) REFERENCES function_eraser_sets(funcname) ON DELETE CASCADE,
       UNIQUE(funcname, varname)
     );
   )",
@@ -127,7 +136,7 @@ void Database::createTables() {
       funcname TEXT,
       varname TEXT,
       tid TEXT,
-      FOREIGN KEY (funcname) REFERENCES nodes(funcname),
+      FOREIGN KEY (funcname) REFERENCES function_eraser_sets(funcname) ON DELETE CASCADE,
       UNIQUE(funcname, varname, tid)
     );
   )",
