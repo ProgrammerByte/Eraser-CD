@@ -541,6 +541,7 @@ int main() {
 
   environment = new ConstructionEnvironment();
   Database *db = new Database();
+  FunctionEraserSets *functionEraserSets = new FunctionEraserSets(db);
   callGraph = new CallGraph(db);
   clang_visitChildren(cursor, visitor, &initialData);
   GraphVisualizer *visualizer = new GraphVisualizer();
@@ -549,7 +550,7 @@ int main() {
   OverApproximatedStaticEraser *staticEraser =
       new OverApproximatedStaticEraser();
 
-  DeltaLockset *deltaLockset = new DeltaLockset(callGraph);
+  DeltaLockset *deltaLockset = new DeltaLockset(callGraph, functionEraserSets);
   deltaLockset->updateLocksets(funcCfgs, functions);
 
   // staticEraser->testFunction(funcCfgs, "main");

@@ -1,50 +1,10 @@
 #include "delta_lockset.h"
 #include "set_operations.h"
 
-DeltaLockset::DeltaLockset(CallGraph *callGraph) {
+DeltaLockset::DeltaLockset(CallGraph *callGraph,
+                           FunctionEraserSets *functionEraserSets) {
   this->callGraph = callGraph;
-}
-
-void combineSets(EraserSets &s1, EraserSets &s2) {
-  s1.locks *= s2.locks;
-  s1.unlocks += s2.unlocks;
-  s1.sharedModified += s2.sharedModified;
-  // TODO - nit: var can be in both internal and external shared at once if
-  // tracking independently, although not the biggest thing
-  s1.internalShared += s2.internalShared - s1.sharedModified;
-  s1.externalShared += s2.externalShared - s1.sharedModified;
-  std::set<std::string> sOrSm =
-      s1.sharedModified + s1.internalShared + s1.externalShared; // TODO -
-  //    CONSIDER USING THIS!!!
-  // std::set<std::string> sOrSm = s1.sharedModified;
-  s1.externalReads += s2.externalReads;
-  s1.externalReads -= sOrSm;
-  s1.externalWrites += s2.externalWrites;
-  s1.externalWrites -= sOrSm;
-  s1.internalReads += s2.internalReads;
-  s1.internalReads -= sOrSm;
-  s1.internalWrites += s2.internalWrites;
-  s1.internalWrites -= sOrSm;
-  s1.queuedWrites += s2.queuedWrites;
-  s1.queuedWrites.removeVars(s1.sharedModified);
-  s1.activeThreads += s2.activeThreads;
-  s1.finishedThreads *= s2.finishedThreads;
-}
-
-void combineSetsForRecursiveThreads(EraserSets &s1, EraserSets &s2) {
-  s1.sharedModified += s2.sharedModified;
-  s1.externalShared += s2.internalShared + s2.externalShared;
-  // std::set<std::string> sOrSm =
-  //    s1.sharedModified + s1.internalShared + s1.externalShared; // TODO -
-  //    CONSIDER USING THIS!!!
-  std::set<std::string> sOrSm = s1.sharedModified;
-  s1.externalReads += s2.internalReads + s2.externalReads;
-  s1.externalReads -= sOrSm;
-  s1.externalWrites += s2.internalWrites + s2.externalWrites;
-  s1.externalWrites -= sOrSm;
-  s1.queuedWrites += s2.queuedWrites;
-  s1.queuedWrites.removeVars(s1.sharedModified);
-  s1.activeThreads += s2.activeThreads;
+  this->functionEraserSets = functionEraserSets;
 }
 
 void addVarToSM(std::string varName, EraserSets &sets) {
@@ -83,9 +43,9 @@ bool DeltaLockset::recursiveFunctionCall(std::string functionName,
     GraphNode *startNode = funcCfgs[currFunc];
     EraserSets nextSets = nodeSets[startNode];
     if (fromThread) {
-      combineSetsForRecursiveThreads(nextSets, sets);
+      functionEraserSets->combineSetsForRecursiveThreads(nextSets, sets);
     } else {
-      combineSets(nextSets, sets);
+      functionEraserSets->combineSets(nextSets, sets);
     }
     if (nextSets != nodeSets[startNode] || !recursive) {
       nodeSets[startNode] = nextSets;
@@ -116,131 +76,129 @@ bool DeltaLockset::handleNode(FunctionCallNode *node, EraserSets &sets) {
   if (recursiveFunctionCall(functionName, sets)) {
     return false;
   }
-  if (functionSets.find(functionName) != functionSets.end()) {
-    EraserSets *s1 = &sets;
-    EraserSets *s2 = &functionSets[functionName];
-    std::set<std::string> s1Shared = s1->externalShared + s1->internalShared;
-    std::set<std::string> s2Shared = s2->externalShared + s2->internalShared;
-    std::set<std::string> s1Reads = s1->externalReads + s1->internalReads;
 
-    std::set<std::string> s1ExternalWrites =
-        s1->externalWrites + s1->queuedWrites.values() + s1->externalShared;
-    std::set<std::string> s1InternalWrites =
-        s1->internalWrites + s1->internalShared;
-    std::set<std::string> s1Writes = s1InternalWrites + s1ExternalWrites;
-    std::set<std::string> s2ExternalWrites =
-        s2->externalWrites + s2->queuedWrites.values() + s2->externalShared;
-    std::set<std::string> s2InternalWrites =
-        s2->internalWrites + s2->internalShared;
-    std::set<std::string> s2Writes = s2InternalWrites + s2ExternalWrites;
+  EraserSets *s1 = &sets;
+  EraserSets *s2 = functionEraserSets->getEraserSets(functionName);
+  std::set<std::string> s1Shared = s1->externalShared + s1->internalShared;
+  std::set<std::string> s2Shared = s2->externalShared + s2->internalShared;
+  std::set<std::string> s1Reads = s1->externalReads + s1->internalReads;
 
-    s1->locks -= s2->unlocks;
-    s1->locks += s2->locks;
-    s1->unlocks -= s2->locks;
-    s1->unlocks += s2->unlocks;
+  std::set<std::string> s1ExternalWrites =
+      s1->externalWrites + s1->queuedWrites.values() + s1->externalShared;
+  std::set<std::string> s1InternalWrites =
+      s1->internalWrites + s1->internalShared;
+  std::set<std::string> s1Writes = s1InternalWrites + s1ExternalWrites;
+  std::set<std::string> s2ExternalWrites =
+      s2->externalWrites + s2->queuedWrites.values() + s2->externalShared;
+  std::set<std::string> s2InternalWrites =
+      s2->internalWrites + s2->internalShared;
+  std::set<std::string> s2Writes = s2InternalWrites + s2ExternalWrites;
 
-    s1->sharedModified +=
-        s2->sharedModified + ((s1Reads + s1Writes) * s2ExternalWrites) +
-        ((s1ExternalWrites + s1->externalReads + s1Shared) * s2Writes);
+  s1->locks -= s2->unlocks;
+  s1->locks += s2->locks;
+  s1->unlocks -= s2->locks;
+  s1->unlocks += s2->unlocks;
 
-    s1->internalShared +=
-        s2->internalShared + (s1InternalWrites + s2InternalWrites) *
-                                 (s1ExternalWrites + s2ExternalWrites +
-                                  s1->externalReads + s2->externalReads);
+  s1->sharedModified +=
+      s2->sharedModified + ((s1Reads + s1Writes) * s2ExternalWrites) +
+      ((s1ExternalWrites + s1->externalReads + s1Shared) * s2Writes);
 
-    s1->externalShared +=
-        s2->externalShared + (s1ExternalWrites + s2ExternalWrites) *
-                                 (s1->internalWrites + s2->internalWrites +
-                                  s1->internalReads + s2->internalReads);
+  s1->internalShared +=
+      s2->internalShared + (s1InternalWrites + s2InternalWrites) *
+                               (s1ExternalWrites + s2ExternalWrites +
+                                s1->externalReads + s2->externalReads);
 
-    std::set<std::string> overlap = s1->internalShared * s1->externalShared;
-    s1->internalShared -= overlap;
-    s1->externalShared -= overlap;
-    s1->sharedModified += overlap;
+  s1->externalShared +=
+      s2->externalShared + (s1ExternalWrites + s2ExternalWrites) *
+                               (s1->internalWrites + s2->internalWrites +
+                                s1->internalReads + s2->internalReads);
 
-    std::set<std::string> sOrSm =
-        s1->internalShared + s1->externalShared + s1->sharedModified;
+  std::set<std::string> overlap = s1->internalShared * s1->externalShared;
+  s1->internalShared -= overlap;
+  s1->externalShared -= overlap;
+  s1->sharedModified += overlap;
 
-    s1->queuedWrites += s2->queuedWrites;
-    s1->queuedWrites.removeVars(s1->sharedModified);
-    s1->internalReads += s2->internalReads;
-    s1->internalReads -= sOrSm;
-    s1->internalWrites += s2->internalWrites;
-    s1->internalWrites -= sOrSm;
-    s1->externalReads += s2->externalReads;
-    s1->externalReads -= sOrSm;
-    s1->externalWrites += s2->externalWrites;
+  std::set<std::string> sOrSm =
+      s1->internalShared + s1->externalShared + s1->sharedModified;
 
-    for (const std::string &varName : s2->finishedThreads) {
-      threadFinished(varName, *s1);
-    }
+  s1->queuedWrites += s2->queuedWrites;
+  s1->queuedWrites.removeVars(s1->sharedModified);
+  s1->internalReads += s2->internalReads;
+  s1->internalReads -= sOrSm;
+  s1->internalWrites += s2->internalWrites;
+  s1->internalWrites -= sOrSm;
+  s1->externalReads += s2->externalReads;
+  s1->externalReads -= sOrSm;
+  s1->externalWrites += s2->externalWrites;
 
-    s1->internalShared -= s1->sharedModified;
-    s1->externalShared -= s1->sharedModified;
+  for (const std::string &varName : s2->finishedThreads) {
+    threadFinished(varName, *s1);
   }
+
+  s1->internalShared -= s1->sharedModified;
+  s1->externalShared -= s1->sharedModified;
   return true;
 };
 
 bool DeltaLockset::handleNode(ThreadCreateNode *node, EraserSets &sets) {
-  if (node->global) {
-    variableWrite(node->varName, sets);
+  std::string varName = node->varName;
+  if (node->global && varName != "") {
+    variableWrite(varName, sets);
   }
   std::string functionName = node->functionName;
-  std::string varName = node->varName;
   if (recursiveFunctionCall(node->functionName, sets, true)) {
     return false;
   }
-  if (functionSets.find(functionName) != functionSets.end()) {
-    std::string tid = currFunc + " " + std::to_string(node->id);
+  std::string tid = currFunc + " " + std::to_string(node->id);
 
-    EraserSets *s1 = &sets;
-    EraserSets *s2 = &functionSets[functionName];
-    std::set<std::string> s1Shared = s1->externalShared + s1->internalShared;
-    std::set<std::string> s2Shared = s2->externalShared + s2->internalShared;
-    std::set<std::string> s1Reads = s1->externalReads + s1->internalReads;
-    std::set<std::string> s2Reads = s2->externalReads + s2->internalReads;
-    std::set<std::string> s1Writes = s1->externalWrites + s1->internalWrites +
-                                     s1->queuedWrites.values() + s1Shared;
-    std::set<std::string> s2Writes = s2->externalWrites + s2->internalWrites +
-                                     s2->queuedWrites.values() + s2Shared;
+  EraserSets *s1 = &sets;
+  EraserSets *s2 = functionEraserSets->getEraserSets(functionName);
+  std::set<std::string> s1Shared = s1->externalShared + s1->internalShared;
+  std::set<std::string> s2Shared = s2->externalShared + s2->internalShared;
+  std::set<std::string> s1Reads = s1->externalReads + s1->internalReads;
+  std::set<std::string> s2Reads = s2->externalReads + s2->internalReads;
+  std::set<std::string> s1Writes = s1->externalWrites + s1->internalWrites +
+                                   s1->queuedWrites.values() + s1Shared;
+  std::set<std::string> s2Writes = s2->externalWrites + s2->internalWrites +
+                                   s2->queuedWrites.values() + s2Shared;
 
-    s1->sharedModified +=
-        s2->sharedModified + ((s1Reads + s1Writes) * s2Writes);
+  s1->sharedModified += s2->sharedModified + ((s1Reads + s1Writes) * s2Writes);
 
-    s1->externalShared += s2Shared + s1->sharedModified +
-                          ((s1Reads + s1Writes) * (s2Reads + s2Writes));
+  s1->externalShared += s2Shared + s1->sharedModified +
+                        ((s1Reads + s1Writes) * (s2Reads + s2Writes));
 
-    s1Shared += s1->externalShared;
+  s1Shared += s1->externalShared;
 
-    if (s1->queuedWrites.find(tid) == s1->queuedWrites.end()) {
-      s1->queuedWrites.insert({tid, {}});
-    }
-    for (const std::string &write : s2Writes) {
-      s1->queuedWrites[tid].insert(write);
-    }
-    s1->queuedWrites.removeVars(s1->sharedModified);
+  if (s1->queuedWrites.find(tid) == s1->queuedWrites.end()) {
+    s1->queuedWrites.insert({tid, {}});
+  }
+  for (const std::string &write : s2Writes) {
+    s1->queuedWrites[tid].insert(write);
+  }
+  s1->queuedWrites.removeVars(s1->sharedModified);
 
-    s1->internalReads -= s1Shared;
-    s1->internalWrites -= s1Shared;
-    s1->externalReads += s2->externalReads + s2->internalReads;
-    s1->externalReads -= s1Shared;
-    s1->externalWrites += s2->externalWrites + s2->internalWrites;
-    s1->externalWrites -= s1Shared;
-    s1->activeThreads.erase(varName);
-    s1->activeThreads -= s2Writes;
-    s1->activeThreads += s2->activeThreads;
+  s1->internalReads -= s1Shared;
+  s1->internalWrites -= s1Shared;
+  s1->externalReads += s2->externalReads + s2->internalReads;
+  s1->externalReads -= s1Shared;
+  s1->externalWrites += s2->externalWrites + s2->internalWrites;
+  s1->externalWrites -= s1Shared;
+  s1->activeThreads.erase(varName);
+  s1->activeThreads -= s2Writes;
+  s1->activeThreads += s2->activeThreads;
+  if (varName != "") {
     if (s1->activeThreads.find(tid) == s1->activeThreads.end()) {
       s1->activeThreads.insert({varName, {}});
     }
     s1->activeThreads[varName] += {tid};
-    s1->externalShared -= s1->sharedModified;
-
-    // If something breaks then try uncommenting the following
-    // std::set<std::string> overlap = s1->internalShared * s1->externalShared;
-    // s1->internalShared -= overlap;
-    // s1->externalShared -= overlap;
-    // s1->sharedModified += overlap;
   }
+  s1->externalShared -= s1->sharedModified;
+
+  // If something breaks then try uncommenting the following
+  // std::set<std::string> overlap = s1->internalShared * s1->externalShared;
+  // s1->internalShared -= overlap;
+  // s1->externalShared -= overlap;
+  // s1->sharedModified += overlap;
   return true;
 };
 
@@ -286,11 +244,7 @@ bool DeltaLockset::handleNode(WriteNode *node, EraserSets &sets) {
 };
 
 bool DeltaLockset::handleNode(ReturnNode *node, EraserSets &sets) {
-  if (functionSets.find(currFunc) == functionSets.end()) {
-    functionSets.insert({currFunc, sets});
-  } else {
-    combineSets(functionSets[currFunc], sets);
-  }
+  functionEraserSets->updateCurrEraserSets(sets);
   return true;
 }
 
@@ -324,10 +278,10 @@ void DeltaLockset::addNodeToQueue(GraphNode *startNode, GraphNode *nextNode) {
 }
 
 void DeltaLockset::handleFunction(GraphNode *startNode) {
+  functionEraserSets->startNewFunction(currFunc);
   forwardQueue.push(startNode);
   nodeSets = {};
-  nodeSets.insert(
-      {startNode, {{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}}});
+  nodeSets.insert({startNode, EraserSets::defaultValue});
   recursive = false;
   bool started = false;
   int lastId = -1;
@@ -366,7 +320,7 @@ void DeltaLockset::handleFunction(GraphNode *startNode) {
           nodeSets.insert({nextNode, nextSets});
           addNodeToQueue(node, nextNode);
         } else {
-          combineSets(nextSets, nodeSets[nextNode]);
+          functionEraserSets->combineSets(nextSets, nodeSets[nextNode]);
 
           if (nextSets != nodeSets[nextNode] ||
               (recursive &&
@@ -381,6 +335,7 @@ void DeltaLockset::handleFunction(GraphNode *startNode) {
       }
     }
   }
+  functionEraserSets->saveCurrEraserSets();
 }
 
 // TODO - startNode unlocks should be used by static eraser to remove from
@@ -389,7 +344,6 @@ void DeltaLockset::updateLocksets(
     std::unordered_map<std::string, StartNode *> funcCfgs,
     std::vector<std::string> changedFunctions) {
   this->funcCfgs = funcCfgs;
-  functionSets = {};
 
   std::vector<std::string> ordering =
       callGraph->deltaLocksetOrdering(changedFunctions);
@@ -401,62 +355,63 @@ void DeltaLockset::updateLocksets(
     currFunc = funcName;
     handleFunction(funcCfgs[funcName]);
 
+    EraserSets *sets = functionEraserSets->getEraserSets(funcName);
     std::cout << "Function: " << funcName << std::endl;
     std::cout << "Locks: ";
-    for (const std::string &lock : functionSets[funcName].locks) {
+    for (const std::string &lock : sets->locks) {
       std::cout << lock << ", ";
     }
     std::cout << std::endl;
     std::cout << "Unlocks: ";
-    for (const std::string &lock : functionSets[funcName].unlocks) {
+    for (const std::string &lock : sets->unlocks) {
       std::cout << lock << ", ";
     }
     std::cout << std::endl;
 
     std::cout << "External Reads: ";
-    for (const std::string &read : functionSets[funcName].externalReads) {
+    for (const std::string &read : sets->externalReads) {
       std::cout << read << ", ";
     }
     std::cout << std::endl;
 
     std::cout << "Internal Reads: ";
-    for (const std::string &read : functionSets[funcName].internalReads) {
+    for (const std::string &read : sets->internalReads) {
       std::cout << read << ", ";
     }
     std::cout << std::endl;
 
     std::cout << "External Writes: ";
-    for (const std::string &write : functionSets[funcName].externalWrites) {
+    for (const std::string &write : sets->externalWrites) {
       std::cout << write << ", ";
     }
     std::cout << std::endl;
 
     std::cout << "Internal Writes: ";
-    for (const std::string &write : functionSets[funcName].internalWrites) {
+    for (const std::string &write : sets->internalWrites) {
       std::cout << write << ", ";
     }
     std::cout << std::endl;
 
     std::cout << "Internal Shared: ";
-    for (const std::string &shared : functionSets[funcName].internalShared) {
+    for (const std::string &shared : sets->internalShared) {
       std::cout << shared << ", ";
     }
     std::cout << std::endl;
 
     std::cout << "External Shared: ";
-    for (const std::string &shared : functionSets[funcName].externalShared) {
+    for (const std::string &shared : sets->externalShared) {
       std::cout << shared << ", ";
     }
     std::cout << std::endl;
 
     std::cout << "Shared Modified: ";
-    for (const std::string &shared : functionSets[funcName].sharedModified) {
+    for (const std::string &shared : sets->sharedModified) {
       std::cout << shared << ", ";
     }
     std::cout << std::endl;
 
     std::cout << "Queued Writes: ";
-    for (const auto &pair : functionSets[funcName].queuedWrites) {
+    for (const auto &pair : sets->queuedWrites) {
       std::cout << pair.first << ": ";
       for (const std::string &write : pair.second) {
         std::cout << write << ", ";
@@ -465,7 +420,7 @@ void DeltaLockset::updateLocksets(
     std::cout << std::endl;
 
     std::cout << "Active Threads: ";
-    for (const auto &pair : functionSets[funcName].activeThreads) {
+    for (const auto &pair : sets->activeThreads) {
       std::cout << pair.first << ": ";
       for (const std::string &tid : pair.second) {
         std::cout << tid << ", ";
@@ -474,7 +429,7 @@ void DeltaLockset::updateLocksets(
     std::cout << std::endl;
 
     std::cout << "Finished Threads: ";
-    for (const std::string &tid : functionSets[funcName].finishedThreads) {
+    for (const std::string &tid : sets->finishedThreads) {
       std::cout << tid << ", ";
     }
     std::cout << std::endl;

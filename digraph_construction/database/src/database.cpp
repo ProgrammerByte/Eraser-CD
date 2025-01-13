@@ -50,18 +50,17 @@ void Database::createTable(std::string query, std::string tableName) {
 }
 
 void Database::createTables() {
-  std::string query = R"(
+  createTable(R"(
     CREATE TABLE nodes_table (
       funcname TEXT PRIMARY KEY,
       recursive BOOLEAN DEFAULT FALSE,
       indegree INTEGER DEFAULT 0,
       marked BOOLEAN DEFAULT FALSE
     );
-  )";
+  )",
+              "nodes_table");
 
-  createTable(query, "nodes_table");
-
-  query = R"(
+  createTable(R"(
     CREATE TABLE adjacency_matrix (
       funcname1 TEXT,
       funcname2 TEXT,
@@ -69,9 +68,70 @@ void Database::createTables() {
       FOREIGN KEY (funcname2) REFERENCES nodes(funcname),
       UNIQUE(funcname1, funcname2)
     );
-  )";
+  )",
+              "adjacency_matrix");
 
-  createTable(query, "adjacency_matrix");
+  createTable(R"(
+    CREATE TABLE function_locks (
+      funcname TEXT,
+      lock TEXT,
+      type TEXT CHECK(type IN ('lock', 'unlock')),
+      FOREIGN KEY (funcname) REFERENCES nodes(funcname),
+      UNIQUE(funcname, lock)
+    );
+  )",
+              "function_locks");
+
+  createTable(R"(
+    CREATE TABLE function_vars (
+      funcname TEXT,
+      varname TEXT,
+      type TEXT CHECK(type IN (
+        'external_read',
+        'internal_read',
+        'external_write',
+        'internal_write',
+        'external_shared',
+        'internal_shared',
+        'shared_modified'
+      )),
+      FOREIGN KEY (funcname) REFERENCES nodes(funcname),
+      UNIQUE(funcname, varname, type)
+    );
+  )",
+              "function_vars");
+
+  createTable(R"(
+    CREATE TABLE queued_writes (
+      funcname TEXT,
+      tid TEXT,
+      varname TEXT,
+      FOREIGN KEY (funcname) REFERENCES nodes(funcname),
+      UNIQUE(funcname, tid, varname)
+    );
+  )",
+              "queued_writes");
+
+  createTable(R"(
+    CREATE TABLE finished_threads (
+      funcname TEXT,
+      varname TEXT,
+      FOREIGN KEY (funcname) REFERENCES nodes(funcname),
+      UNIQUE(funcname, varname)
+    );
+  )",
+              "finished_threads");
+
+  createTable(R"(
+    CREATE TABLE active_threads (
+      funcname TEXT,
+      varname TEXT,
+      tid TEXT,
+      FOREIGN KEY (funcname) REFERENCES nodes(funcname),
+      UNIQUE(funcname, varname, tid)
+    );
+  )",
+              "active_threads");
 }
 
 Database::Database() {
