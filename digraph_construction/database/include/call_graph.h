@@ -15,6 +15,7 @@ public:
   void addEdge(std::string caller, std::string callee);
   std::vector<std::string>
   deltaLocksetOrdering(std::vector<std::string> functions);
+  bool shouldVisitNode(std::string funcName);
 
 private:
   Database *db;

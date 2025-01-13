@@ -348,10 +348,10 @@ void DeltaLockset::updateLocksets(
   std::vector<std::string> ordering =
       callGraph->deltaLocksetOrdering(changedFunctions);
 
-  // TODO - STORE NEIGHBORS AND PREVIOUS LOCKSETS SO WE KNOW THAT NO CHANGES
-  // HAVE NEEDED HAVE CROPPED UP - OPTIMIZATION
-
   for (const std::string &funcName : ordering) {
+    if (!callGraph->shouldVisitNode(funcName)) {
+      continue;
+    }
     currFunc = funcName;
     handleFunction(funcCfgs[funcName]);
 

@@ -44,8 +44,8 @@ void CallGraph::markNodes(std::vector<std::string> &startNodes,
   sqlite3_stmt *stmt;
 
   while (!q.empty()) {
-    std::string query = "UPDATE nodes_table SET marked = 1 WHERE funcname "
-                        "IN " +
+    std::string query = "UPDATE nodes_table SET marked = 1, recently_changed = "
+                        "1 WHERE funcname IN " +
                         db->createTupleList(q) + ";";
     db->prepareStatement(stmt, query, q);
     db->runStatement(stmt);
@@ -198,4 +198,17 @@ std::vector<std::string>
 CallGraph::deltaLocksetOrdering(std::vector<std::string> functions) {
   markNodes(functions, true);
   return traverseGraph(true);
+}
+
+// bottom up only!!!
+bool CallGraph::shouldVisitNode(std::string funcName) {
+  sqlite3_stmt *stmt;
+  std::string query =
+      "SELECT 1 FROM nodes_table WHERE funcname = ? AND recently_changed = 1;";
+
+  std::vector<std::string> params = {funcName};
+  db->prepareStatement(stmt, query, params);
+  bool result = sqlite3_step(stmt) == SQLITE_ROW;
+  sqlite3_finalize(stmt);
+  return result;
 }

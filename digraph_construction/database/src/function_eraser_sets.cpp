@@ -71,6 +71,19 @@ void FunctionEraserSets::insertCurrSetsIntoDb(bool locksChanged,
   db->runStatement(stmt);
 
   query =
+      "UPDATE nodes_table "
+      "SET recently_changed = 1 "
+      "WHERE funcname IN ("
+      "  SELECT funcname1 "
+      "  FROM adjacency_matrix "
+      "  JOIN nodes_table AS n2 ON adjacency_matrix.funcname2 = n2.funcname "
+      "  WHERE n2.funcname = ?"
+      ");";
+  params = {currFunc};
+  db->prepareStatement(stmt, query, params);
+  db->runStatement(stmt);
+
+  query =
       "INSERT INTO function_locks (funcname, varname, type) VALUES (?, ?, ?);";
   for (const std::string &lock : currFuncSets.locks) {
     params = {currFunc, lock, "lock"};
@@ -288,11 +301,13 @@ void FunctionEraserSets::startNewFunction(std::string funcName) {
 }
 
 void FunctionEraserSets::markFunctionEraserSetsAsOld() {
-  std::string query =
-      "UPDATE function_eraser_sets SET locks_changed = 0, vars_changed = 0 "
-      "WHERE locks_changed = 1 OR vars_changed = 1;";
-
   sqlite3_stmt *stmt;
+  std::string query =
+      "UPDATE function_eraser_sets SET locks_changed = 0, vars_changed = 0;";
+  db->prepareStatement(stmt, query);
+  db->runStatement(stmt);
+
+  query = "UPDATE nodes_table SET recently_changed = 0;";
   db->prepareStatement(stmt, query);
   db->runStatement(stmt);
 }
