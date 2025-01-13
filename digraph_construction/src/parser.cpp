@@ -553,6 +553,8 @@ int main() {
   DeltaLockset *deltaLockset = new DeltaLockset(callGraph, functionEraserSets);
   deltaLockset->updateLocksets(funcCfgs, functions);
 
+  functionEraserSets->markFunctionEraserSetsAsOld();
+
   // staticEraser->testFunction(funcCfgs, "main");
 
   clang_disposeTranslationUnit(unit);

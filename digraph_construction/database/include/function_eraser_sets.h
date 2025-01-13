@@ -23,7 +23,7 @@ public:
 
 private:
   bool checkCurrFuncInDb();
-  void insertCurrSetsIntoDb();
+  void insertCurrSetsIntoDb(bool locksChanged, bool varsChanged);
   void deleteCurrFuncFromDb();
   EraserSets extractSetsFromDb(std::string funcName);
 

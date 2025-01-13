@@ -166,4 +166,11 @@ std::string Database::createTupleList(std::vector<std::string> &nodes) {
   return tupleList;
 }
 
+std::string Database::createBoolean(bool value) {
+  if (value) {
+    return "1";
+  }
+  return "0";
+}
+
 Database::~Database() { sqlite3_close(db); }

@@ -20,6 +20,7 @@ public:
   void createTables();
 
   std::string createTupleList(std::vector<std::string> &nodes);
+  std::string createBoolean(bool value);
 
 private:
   std::string dbName = "eraser.db";

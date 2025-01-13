@@ -60,10 +60,13 @@ bool FunctionEraserSets::checkCurrFuncInDb() {
   return result;
 }
 
-void FunctionEraserSets::insertCurrSetsIntoDb() {
+void FunctionEraserSets::insertCurrSetsIntoDb(bool locksChanged,
+                                              bool varsChanged) {
   sqlite3_stmt *stmt;
-  std::string query = "INSERT INTO function_eraser_sets (funcname) VALUES (?);";
-  std::vector<std::string> params = {currFunc};
+  std::string query = "INSERT INTO function_eraser_sets (funcname, "
+                      "locks_changed, vars_changed) VALUES (?, ?, ?);";
+  std::vector<std::string> params = {currFunc, db->createBoolean(locksChanged),
+                                     db->createBoolean(varsChanged)};
   db->prepareStatement(stmt, query, params);
   db->runStatement(stmt);
 
@@ -266,12 +269,14 @@ void FunctionEraserSets::saveCurrEraserSets() {
   functionSets[currFunc] = currFuncSets;
   bool alreadyInDb = checkCurrFuncInDb();
   if (!alreadyInDb) {
-    insertCurrSetsIntoDb();
+    insertCurrSetsIntoDb(true, true);
   } else {
     EraserSets originalSets = extractSetsFromDb(currFunc);
-    if (originalSets != currFuncSets) {
+    bool locksDiff = !originalSets.locksEqual(currFuncSets);
+    bool varsDiff = !originalSets.varsEqual(currFuncSets);
+    if (locksDiff || varsDiff) {
       deleteCurrFuncFromDb();
-      insertCurrSetsIntoDb();
+      insertCurrSetsIntoDb(locksDiff, varsDiff);
     }
   }
 }
@@ -282,10 +287,9 @@ void FunctionEraserSets::startNewFunction(std::string funcName) {
   currFuncSetsStarted = false;
 }
 
-// TODO - CALL ME AT SOME POINT!!!
 void FunctionEraserSets::markFunctionEraserSetsAsOld() {
   std::string query =
-      "UPDATE function_eraser_sets SET locks_changed = 0 AND vars_changed = 0 "
+      "UPDATE function_eraser_sets SET locks_changed = 0, vars_changed = 0 "
       "WHERE locks_changed = 1 OR vars_changed = 1;";
 
   sqlite3_stmt *stmt;

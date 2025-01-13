@@ -33,18 +33,6 @@ void CallGraph::addEdge(std::string caller, std::string callee) {
   }
 }
 
-std::string createTupleList(std::vector<std::string> &nodes) {
-  std::string tupleList = "(";
-  for (size_t i = 0; i < nodes.size(); ++i) {
-    tupleList += "?";
-    if (i != nodes.size() - 1) {
-      tupleList += ", ";
-    }
-  }
-  tupleList += ")";
-  return tupleList;
-}
-
 void CallGraph::markNodes(std::vector<std::string> &startNodes,
                           bool reverse = false) {
   std::vector<std::string> q = {};
@@ -58,7 +46,7 @@ void CallGraph::markNodes(std::vector<std::string> &startNodes,
   while (!q.empty()) {
     std::string query = "UPDATE nodes_table SET marked = 1 WHERE funcname "
                         "IN " +
-                        createTupleList(q) + ";";
+                        db->createTupleList(q) + ";";
     db->prepareStatement(stmt, query, q);
     db->runStatement(stmt);
 
@@ -69,7 +57,7 @@ void CallGraph::markNodes(std::vector<std::string> &startNodes,
           "adjacency_matrix "
           " JOIN nodes_table ON nodes_table.funcname = "
           " adjacency_matrix.funcname1 WHERE adjacency_matrix.funcname2 IN " +
-          createTupleList(q) +
+          db->createTupleList(q) +
           " GROUP BY funcname1"
           "),"
           "result AS ("
@@ -89,7 +77,7 @@ void CallGraph::markNodes(std::vector<std::string> &startNodes,
           "adjacency_matrix "
           " JOIN nodes_table ON nodes_table.funcname = "
           " adjacency_matrix.funcname2 WHERE adjacency_matrix.funcname1 IN " +
-          createTupleList(q) +
+          db->createTupleList(q) +
           " GROUP BY funcname2"
           "),"
           "result AS ("
@@ -139,7 +127,7 @@ CallGraph::getNextNodes(std::vector<std::string> &order) {
 
   query = "UPDATE nodes_table SET marked = 0 WHERE funcname "
           "IN " +
-          createTupleList(q) + ";";
+          db->createTupleList(q) + ";";
   db->prepareStatement(stmt, query, q);
   db->runStatement(stmt);
 
@@ -160,7 +148,7 @@ std::vector<std::string> CallGraph::traverseGraph(bool reverse = false) {
           "adjacency_matrix "
           " JOIN nodes_table ON nodes_table.funcname = "
           " adjacency_matrix.funcname1 WHERE adjacency_matrix.funcname2 IN " +
-          createTupleList(q) +
+          db->createTupleList(q) +
           " GROUP BY funcname1"
           "),"
           "result AS ("
@@ -180,7 +168,7 @@ std::vector<std::string> CallGraph::traverseGraph(bool reverse = false) {
           "adjacency_matrix "
           " JOIN nodes_table ON nodes_table.funcname = "
           " adjacency_matrix.funcname2 WHERE adjacency_matrix.funcname1 IN " +
-          createTupleList(q) +
+          db->createTupleList(q) +
           " GROUP BY funcname2"
           "),"
           "result AS ("

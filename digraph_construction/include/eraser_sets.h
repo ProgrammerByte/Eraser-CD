@@ -122,9 +122,12 @@ struct EraserSets {
   std::set<std::string> finishedThreads;
   ActiveThreads activeThreads;
 
-  bool operator==(const EraserSets &other) const {
-    return locks == other.locks && unlocks == other.unlocks &&
-           externalReads == other.externalReads &&
+  bool locksEqual(const EraserSets &other) const {
+    return locks == other.locks && unlocks == other.unlocks;
+  }
+
+  bool varsEqual(const EraserSets &other) const {
+    return externalReads == other.externalReads &&
            internalReads == other.internalReads &&
            externalWrites == other.externalWrites &&
            internalWrites == other.internalWrites &&
@@ -134,6 +137,10 @@ struct EraserSets {
            queuedWrites == other.queuedWrites &&
            finishedThreads == other.finishedThreads &&
            activeThreads == other.activeThreads;
+  }
+
+  bool operator==(const EraserSets &other) const {
+    return locksEqual(other) && varsEqual(other);
   }
 
   bool operator!=(const EraserSets &other) const { return !(*this == other); }
