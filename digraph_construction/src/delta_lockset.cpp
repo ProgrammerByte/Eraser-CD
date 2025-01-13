@@ -11,12 +11,12 @@ void combineSets(EraserSets &s1, EraserSets &s2) {
   s1.sharedModified += s2.sharedModified;
   // TODO - nit: var can be in both internal and external shared at once if
   // tracking independently, although not the biggest thing
-  s1.internalShared += s2.internalShared;
-  s1.externalShared += s2.externalShared;
-  // std::set<std::string> sOrSm =
-  //     s1.sharedModified + s1.internalShared + s1.externalShared; // TODO -
+  s1.internalShared += s2.internalShared - s1.sharedModified;
+  s1.externalShared += s2.externalShared - s1.sharedModified;
+  std::set<std::string> sOrSm =
+      s1.sharedModified + s1.internalShared + s1.externalShared; // TODO -
   //    CONSIDER USING THIS!!!
-  std::set<std::string> sOrSm = s1.sharedModified;
+  // std::set<std::string> sOrSm = s1.sharedModified;
   s1.externalReads += s2.externalReads;
   s1.externalReads -= sOrSm;
   s1.externalWrites += s2.externalWrites;
@@ -45,6 +45,35 @@ void combineSetsForRecursiveThreads(EraserSets &s1, EraserSets &s2) {
   s1.queuedWrites += s2.queuedWrites;
   s1.queuedWrites.removeVars(s1.sharedModified);
   s1.activeThreads += s2.activeThreads;
+}
+
+void addVarToSM(std::string varName, EraserSets &sets) {
+  sets.sharedModified.insert(varName);
+  sets.queuedWrites.removeVar(varName);
+  sets.internalReads.erase(varName);
+  sets.externalReads.erase(varName);
+  sets.internalWrites.erase(varName);
+  sets.externalWrites.erase(varName);
+  sets.internalShared.erase(varName);
+  sets.externalShared.erase(varName);
+}
+
+bool variableWrite(std::string varName, EraserSets &sets) {
+  if (sets.sharedModified.find(varName) != sets.sharedModified.end()) {
+    return true;
+  }
+  std::set<std::string> queuedWrites = sets.queuedWrites.values();
+  if (queuedWrites.find(varName) != queuedWrites.end() ||
+      sets.externalWrites.find(varName) != sets.externalWrites.end() ||
+      sets.externalReads.find(varName) != sets.externalReads.end() ||
+      sets.externalShared.find(varName) != sets.externalShared.end() ||
+      sets.internalShared.find(varName) != sets.internalShared.end()) {
+    addVarToSM(varName, sets);
+  } else {
+    sets.internalWrites.insert(varName);
+  }
+  sets.activeThreads.erase(varName);
+  return true;
 }
 
 bool DeltaLockset::recursiveFunctionCall(std::string functionName,
@@ -154,7 +183,7 @@ bool DeltaLockset::handleNode(FunctionCallNode *node, EraserSets &sets) {
 
 bool DeltaLockset::handleNode(ThreadCreateNode *node, EraserSets &sets) {
   if (node->global) {
-    // sharedVariableAccessed(node->varName, sets);
+    variableWrite(node->varName, sets);
   }
   std::string functionName = node->functionName;
   std::string varName = node->varName;
@@ -162,7 +191,7 @@ bool DeltaLockset::handleNode(ThreadCreateNode *node, EraserSets &sets) {
     return false;
   }
   if (functionSets.find(functionName) != functionSets.end()) {
-    std::string tid = currFunc + std::to_string(node->id);
+    std::string tid = currFunc + " " + std::to_string(node->id);
 
     EraserSets *s1 = &sets;
     EraserSets *s2 = &functionSets[functionName];
@@ -232,17 +261,6 @@ bool DeltaLockset::handleNode(UnlockNode *node, EraserSets &sets) {
   return true;
 };
 
-void addVarToSM(std::string varName, EraserSets &sets) {
-  sets.sharedModified.insert(varName);
-  sets.queuedWrites.removeVar(varName);
-  sets.internalReads.erase(varName);
-  sets.externalReads.erase(varName);
-  sets.internalWrites.erase(varName);
-  sets.externalWrites.erase(varName);
-  sets.internalShared.erase(varName);
-  sets.externalShared.erase(varName);
-}
-
 bool DeltaLockset::handleNode(ReadNode *node, EraserSets &sets) {
   std::string varName = node->varName;
   if (sets.sharedModified.find(varName) != sets.sharedModified.end()) {
@@ -264,22 +282,7 @@ bool DeltaLockset::handleNode(ReadNode *node, EraserSets &sets) {
 };
 
 bool DeltaLockset::handleNode(WriteNode *node, EraserSets &sets) {
-  std::string varName = node->varName;
-  if (sets.sharedModified.find(varName) != sets.sharedModified.end()) {
-    return true;
-  }
-  std::set<std::string> queuedWrites = sets.queuedWrites.values();
-  if (queuedWrites.find(varName) != queuedWrites.end() ||
-      sets.externalWrites.find(varName) != sets.externalWrites.end() ||
-      sets.externalReads.find(varName) != sets.externalReads.end() ||
-      sets.externalShared.find(varName) != sets.externalShared.end() ||
-      sets.internalShared.find(varName) != sets.internalShared.end()) {
-    addVarToSM(varName, sets);
-  } else {
-    sets.internalWrites.insert(varName);
-  }
-  sets.activeThreads.erase(varName);
-  return true;
+  return variableWrite(node->varName, sets);
 };
 
 bool DeltaLockset::handleNode(ReturnNode *node, EraserSets &sets) {
