@@ -142,6 +142,37 @@ void Database::createTables() {
     );
   )",
               "active_threads");
+
+  createTable(R"(
+    CREATE TABLE function_variable_locksets (
+      id INTEGER PRIMARY KEY,
+      funcname TEXT,
+      stringified_input_locks TEXT,
+      used BOOLEAN DEFAULT TRUE
+    );
+  )",
+              "function_variable_locksets");
+
+  createTable(R"(
+    CREATE TABLE function_variable_locksets_outputs (
+      varname TEXT,
+      lock TEXT,
+      function_variable_locksets_id INTEGER,
+      FOREIGN KEY (function_variable_locksets_id) REFERENCES function_variable_locksets(id) ON DELETE CASCADE,
+      UNIQUE(varname, lock, function_variable_locksets_id)
+    );
+  )",
+              "function_variable_locksets_outputs");
+
+  createTable(R"(
+    CREATE TABLE function_variable_locksets_variables (
+      varname TEXT,
+      function_variable_locksets_id INTEGER,
+      FOREIGN KEY (function_variable_locksets_id) REFERENCES function_variable_locksets(id) ON DELETE CASCADE,
+      UNIQUE(varname, function_variable_locksets_id)
+    );
+  )",
+              "function_variable_locksets");
 }
 
 Database::Database() {
