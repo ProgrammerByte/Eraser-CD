@@ -73,6 +73,30 @@ struct QueuedWrites
     return result;
   }
 
+  QueuedWrites removeVars(std::set<std::string> vars) {
+    for (auto it = begin(); it != end();) {
+      it->second -= vars;
+      if (it->second.empty()) {
+        it = erase(it);
+      } else {
+        ++it;
+      }
+    }
+    return *this;
+  }
+
+  QueuedWrites removeVar(std::string var) {
+    for (auto it = begin(); it != end();) {
+      it->second.erase(var);
+      if (it->second.empty()) {
+        it = erase(it);
+      } else {
+        ++it;
+      }
+    }
+    return *this;
+  }
+
   QueuedWrites &operator+=(const QueuedWrites &other) {
     for (auto &pair : other) {
       if (find(pair.first) != end()) {
