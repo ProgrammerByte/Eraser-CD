@@ -49,6 +49,7 @@ enum LhsType { LHS_NONE, LHS_WRITE, LHS_READ_AND_WRITE };
 static unordered_map<string, StartNode *> funcCfgs = {};
 static unordered_map<string, bool> funcMap = {};
 static vector<string> functions = {};
+static set<string> functionDeclarations = {};
 static vector<unordered_map<string, VariableInfo>> scopeStack = {};
 static vector<unsigned int> scopeNums = {0};
 static int inFunc = 0;
@@ -84,11 +85,7 @@ string getCursorFilename(CXCursor cursor) {
   return result;
 }
 
-LhsType assignmentOperatorType(CXCursor parent, unsigned int childIndex) {
-  if (childIndex != 0) {
-    return LHS_NONE;
-  }
-
+LhsType assignmentOperatorType(CXCursor parent) {
   CXCursorKind parentKind = clang_getCursorKind(parent);
 
   CXSourceRange range = clang_getCursorExtent(parent);
@@ -327,13 +324,15 @@ void classifyVariable(CXCursor cursor, LhsType lhsType,
               to_string(variableInfo.scopeNum) + " " + varName;
   }
 
-  if (lhsType == LHS_WRITE) {
-    (*nodesToAdd).push_back(new WriteNode(varName));
-  } else if (lhsType == LHS_READ_AND_WRITE) {
-    (*nodesToAdd).push_back(new ReadNode(varName));
-    (*nodesToAdd).push_back(new WriteNode(varName));
-  } else {
-    environment->onAdd(new ReadNode(varName));
+  if (functionDeclarations.find(varName) == functionDeclarations.end()) {
+    if (lhsType == LHS_WRITE) {
+      (*nodesToAdd).push_back(new WriteNode(varName));
+    } else if (lhsType == LHS_READ_AND_WRITE) {
+      (*nodesToAdd).push_back(new ReadNode(varName));
+      (*nodesToAdd).push_back(new WriteNode(varName));
+    } else {
+      environment->onAdd(new ReadNode(varName));
+    }
   }
 }
 
@@ -377,6 +376,7 @@ BranchType getBranchType(CXCursor cursor, CXCursor parent,
 struct VisitorData {
   unsigned int childIndex;
   vector<GraphNode *> nodesToAdd;
+  LhsType lhsType;
 };
 
 void onNewScope() {
@@ -406,6 +406,7 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
       string fileName = getCursorFilename(cursor);
       funcName = fileName + " " + funcName;
     }
+    functionDeclarations.insert(funcName);
   } else if (cursorKind == CXCursor_CompoundStmt) {
     if (ignoreNextCompound) {
       startNode = environment->startNewTree(funcName);
@@ -417,14 +418,19 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
 
   VisitorData *visitorData = reinterpret_cast<VisitorData *>(clientData);
   unsigned int childIndex = visitorData->childIndex;
+  LhsType lhsType = visitorData->lhsType;
+  LhsType nextLhsType = lhsType;
+  if (lhsType == LHS_NONE) {
+    nextLhsType = assignmentOperatorType(cursor);
+  }
 
-  VisitorData childData = {0, {}};
+  VisitorData childData = {0, {}, nextLhsType};
+  vector<GraphNode *> nodesToAddAfterChildren = {};
   if (cursorKind == CXCursor_CallExpr) {
     handleFunctionCall(cursor, &childData.nodesToAdd);
   } else if (cursorKind == CXCursor_VarDecl ||
              cursorKind == CXCursor_DeclRefExpr ||
              cursorKind == CXCursor_ParmDecl) {
-    LhsType lhsType = assignmentOperatorType(parent, childIndex);
     classifyVariable(cursor, lhsType, &visitorData->nodesToAdd);
   } else if (cursorKind == CXCursor_BreakStmt) {
     environment->onAdd(new BreakNode());
@@ -458,8 +464,14 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
   }
 
   clang_visitChildren(cursor, visitor, &childData);
-  for (int i = 0; i < childData.nodesToAdd.size(); i++) {
-    environment->onAdd(childData.nodesToAdd[i]);
+  if (lhsType == LHS_NONE) {
+    for (int i = 0; i < childData.nodesToAdd.size(); i++) {
+      environment->onAdd(childData.nodesToAdd[i]);
+    }
+  } else {
+    for (int i = 0; i < childData.nodesToAdd.size(); i++) {
+      visitorData->nodesToAdd.push_back(childData.nodesToAdd[i]);
+    }
   }
   if (cursorKind == CXCursor_IfStmt ||
       cursorKind == CXCursor_ConditionalOperator) {
@@ -505,6 +517,7 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
   }
 
   visitorData->childIndex += 1;
+  visitorData->lhsType = LHS_NONE;
   return CXChildVisit_Continue;
 }
 
@@ -523,7 +536,7 @@ int main() {
 
   CXCursor cursor = clang_getTranslationUnitCursor(unit);
 
-  VisitorData initialData = {0, {}};
+  VisitorData initialData = {0, {}, LHS_NONE};
 
   environment = new ConstructionEnvironment();
   callGraph = new CallGraph();
