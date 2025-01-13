@@ -147,11 +147,12 @@ struct VariableLocks
   }
 
   VariableLocks &operator+=(const VariableLocks &other) {
-    for (auto &pair : *this) {
-      if (other.find(pair.first) != end()) {
-        pair.second += other.at(pair.first);
+    for (auto it = begin(); it != end();) {
+      if (other.find(it->first) != end()) {
+        it->second += other.at(it->first);
+        ++it;
       } else {
-        erase(pair.first);
+        erase(it->first);
       }
     }
     return *this;
