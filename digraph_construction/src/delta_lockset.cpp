@@ -18,7 +18,28 @@ void addVarToSM(std::string varName, EraserSets &sets) {
   sets.externalShared.erase(varName);
 }
 
-bool variableWrite(std::string varName, EraserSets &sets) {
+bool DeltaLockset::variableRead(std::string varName, EraserSets &sets) {
+  this->functionDirectReads.insert(varName);
+  if (sets.sharedModified.find(varName) != sets.sharedModified.end()) {
+    return true;
+  }
+  std::set<std::string> queuedWrites = sets.queuedWrites.values();
+  if (queuedWrites.find(varName) != queuedWrites.end()) {
+    addVarToSM(varName, sets);
+  } else if (sets.externalReads.find(varName) != sets.externalReads.end() ||
+             sets.externalWrites.find(varName) != sets.externalWrites.end()) {
+    sets.externalShared.insert(varName);
+    sets.externalWrites.erase(varName);
+    sets.externalReads.erase(varName);
+  } else if (sets.externalShared.find(varName) == sets.externalShared.end() ||
+             sets.internalShared.find(varName) == sets.internalShared.end()) {
+    sets.internalReads.insert(varName);
+  }
+  return true;
+}
+
+bool DeltaLockset::variableWrite(std::string varName, EraserSets &sets) {
+  this->functionDirectWrites.insert(varName);
   if (sets.sharedModified.find(varName) != sets.sharedModified.end()) {
     return true;
   }
@@ -203,7 +224,11 @@ bool DeltaLockset::handleNode(ThreadCreateNode *node, EraserSets &sets) {
 };
 
 bool DeltaLockset::handleNode(ThreadJoinNode *node, EraserSets &sets) {
-  threadFinished(node->varName, sets);
+  std::string varName = node->varName;
+  if (node->global && varName != "") {
+    variableRead(varName, sets);
+  }
+  threadFinished(varName, sets);
   return true;
 };
 
@@ -220,23 +245,7 @@ bool DeltaLockset::handleNode(UnlockNode *node, EraserSets &sets) {
 };
 
 bool DeltaLockset::handleNode(ReadNode *node, EraserSets &sets) {
-  std::string varName = node->varName;
-  if (sets.sharedModified.find(varName) != sets.sharedModified.end()) {
-    return true;
-  }
-  std::set<std::string> queuedWrites = sets.queuedWrites.values();
-  if (queuedWrites.find(varName) != queuedWrites.end()) {
-    addVarToSM(varName, sets);
-  } else if (sets.externalReads.find(varName) != sets.externalReads.end() ||
-             sets.externalWrites.find(varName) != sets.externalWrites.end()) {
-    sets.externalShared.insert(varName);
-    sets.externalWrites.erase(varName);
-    sets.externalReads.erase(varName);
-  } else if (sets.externalShared.find(varName) == sets.externalShared.end() ||
-             sets.internalShared.find(varName) == sets.internalShared.end()) {
-    sets.internalReads.insert(varName);
-  }
-  return true;
+  return variableRead(node->varName, sets);
 };
 
 bool DeltaLockset::handleNode(WriteNode *node, EraserSets &sets) {
@@ -278,6 +287,8 @@ void DeltaLockset::addNodeToQueue(GraphNode *startNode, GraphNode *nextNode) {
 }
 
 void DeltaLockset::handleFunction(GraphNode *startNode) {
+  functionDirectReads.clear();
+  functionDirectWrites.clear();
   functionEraserSets->startNewFunction(currFunc);
   forwardQueue.push(startNode);
   nodeSets = {};
@@ -335,6 +346,8 @@ void DeltaLockset::handleFunction(GraphNode *startNode) {
       }
     }
   }
+  functionEraserSets->saveFunctionDirectVariableAccesses(functionDirectReads,
+                                                         functionDirectWrites);
   functionEraserSets->saveCurrEraserSets();
 }
 

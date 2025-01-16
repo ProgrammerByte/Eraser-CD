@@ -76,6 +76,8 @@ private:
   bool recursive;
   CallGraph *callGraph;
   FunctionEraserSets *functionEraserSets;
+  std::set<std::string> functionDirectReads;
+  std::set<std::string> functionDirectWrites;
 
   std::priority_queue<GraphNode *, std::vector<GraphNode *>, CompareGraphNode>
       forwardQueue;
@@ -86,6 +88,8 @@ private:
   std::string currFunc;
   std::unordered_map<GraphNode *, EraserSets> nodeSets;
 
+  bool variableRead(std::string varName, EraserSets &sets);
+  bool variableWrite(std::string varName, EraserSets &sets);
   bool recursiveFunctionCall(std::string functionName, EraserSets &sets,
                              bool fromThread);
   void sharedVariableAccessed(std::string varName, EraserSets &sets);

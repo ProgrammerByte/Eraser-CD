@@ -311,3 +311,24 @@ void FunctionEraserSets::markFunctionEraserSetsAsOld() {
   db->prepareStatement(stmt, query);
   db->runStatement(stmt);
 }
+
+void FunctionEraserSets::saveFunctionDirectVariableAccesses(
+    std::set<std::string> &reads, std::set<std::string> &writes) {
+  sqlite3_stmt *stmt;
+  std::string query =
+      "INSERT INTO function_variable_direct_accesses (funcname, "
+      "varname, type) VALUES (?, ?, ?);";
+  std::vector<std::string> params;
+
+  for (const std::string &read : reads) {
+    params = {currFunc, read, "read"};
+    db->prepareStatement(stmt, query, params);
+    db->runStatement(stmt);
+  }
+
+  for (const std::string &write : writes) {
+    params = {currFunc, write, "write"};
+    db->prepareStatement(stmt, query, params);
+    db->runStatement(stmt);
+  }
+}

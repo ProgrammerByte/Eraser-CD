@@ -20,6 +20,8 @@ public:
   void saveCurrEraserSets();
   void startNewFunction(std::string funcName);
   void markFunctionEraserSetsAsOld();
+  void saveFunctionDirectVariableAccesses(std::set<std::string> &reads,
+                                          std::set<std::string> &writes);
 
 private:
   bool checkCurrFuncInDb();
