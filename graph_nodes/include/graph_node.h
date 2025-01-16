@@ -29,3 +29,9 @@ public:
   // NEED ONE TO CONTINUE
   std::string getNodeType();
 };
+
+struct CompareGraphNode {
+  bool operator()(const GraphNode *a, const GraphNode *b) {
+    return a->id > b->id;
+  }
+};

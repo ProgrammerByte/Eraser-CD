@@ -368,84 +368,86 @@ void DeltaLockset::updateLocksets(
     currFunc = funcName;
     handleFunction(funcCfgs[funcName]);
 
-    EraserSets *sets = functionEraserSets->getEraserSets(funcName);
-    std::cout << "Function: " << funcName << std::endl;
-    std::cout << "Locks: ";
-    for (const std::string &lock : sets->locks) {
-      std::cout << lock << ", ";
-    }
-    std::cout << std::endl;
-    std::cout << "Unlocks: ";
-    for (const std::string &lock : sets->unlocks) {
-      std::cout << lock << ", ";
-    }
-    std::cout << std::endl;
+    if (false) {
+      EraserSets *sets = functionEraserSets->getEraserSets(funcName);
+      std::cout << "Function: " << funcName << std::endl;
+      std::cout << "Locks: ";
+      for (const std::string &lock : sets->locks) {
+        std::cout << lock << ", ";
+      }
+      std::cout << std::endl;
+      std::cout << "Unlocks: ";
+      for (const std::string &lock : sets->unlocks) {
+        std::cout << lock << ", ";
+      }
+      std::cout << std::endl;
 
-    std::cout << "External Reads: ";
-    for (const std::string &read : sets->externalReads) {
-      std::cout << read << ", ";
-    }
-    std::cout << std::endl;
+      std::cout << "External Reads: ";
+      for (const std::string &read : sets->externalReads) {
+        std::cout << read << ", ";
+      }
+      std::cout << std::endl;
 
-    std::cout << "Internal Reads: ";
-    for (const std::string &read : sets->internalReads) {
-      std::cout << read << ", ";
-    }
-    std::cout << std::endl;
+      std::cout << "Internal Reads: ";
+      for (const std::string &read : sets->internalReads) {
+        std::cout << read << ", ";
+      }
+      std::cout << std::endl;
 
-    std::cout << "External Writes: ";
-    for (const std::string &write : sets->externalWrites) {
-      std::cout << write << ", ";
-    }
-    std::cout << std::endl;
-
-    std::cout << "Internal Writes: ";
-    for (const std::string &write : sets->internalWrites) {
-      std::cout << write << ", ";
-    }
-    std::cout << std::endl;
-
-    std::cout << "Internal Shared: ";
-    for (const std::string &shared : sets->internalShared) {
-      std::cout << shared << ", ";
-    }
-    std::cout << std::endl;
-
-    std::cout << "External Shared: ";
-    for (const std::string &shared : sets->externalShared) {
-      std::cout << shared << ", ";
-    }
-    std::cout << std::endl;
-
-    std::cout << "Shared Modified: ";
-    for (const std::string &shared : sets->sharedModified) {
-      std::cout << shared << ", ";
-    }
-    std::cout << std::endl;
-
-    std::cout << "Queued Writes: ";
-    for (const auto &pair : sets->queuedWrites) {
-      std::cout << pair.first << ": ";
-      for (const std::string &write : pair.second) {
+      std::cout << "External Writes: ";
+      for (const std::string &write : sets->externalWrites) {
         std::cout << write << ", ";
       }
-    }
-    std::cout << std::endl;
+      std::cout << std::endl;
 
-    std::cout << "Active Threads: ";
-    for (const auto &pair : sets->activeThreads) {
-      std::cout << pair.first << ": ";
-      for (const std::string &tid : pair.second) {
+      std::cout << "Internal Writes: ";
+      for (const std::string &write : sets->internalWrites) {
+        std::cout << write << ", ";
+      }
+      std::cout << std::endl;
+
+      std::cout << "Internal Shared: ";
+      for (const std::string &shared : sets->internalShared) {
+        std::cout << shared << ", ";
+      }
+      std::cout << std::endl;
+
+      std::cout << "External Shared: ";
+      for (const std::string &shared : sets->externalShared) {
+        std::cout << shared << ", ";
+      }
+      std::cout << std::endl;
+
+      std::cout << "Shared Modified: ";
+      for (const std::string &shared : sets->sharedModified) {
+        std::cout << shared << ", ";
+      }
+      std::cout << std::endl;
+
+      std::cout << "Queued Writes: ";
+      for (const auto &pair : sets->queuedWrites) {
+        std::cout << pair.first << ": ";
+        for (const std::string &write : pair.second) {
+          std::cout << write << ", ";
+        }
+      }
+      std::cout << std::endl;
+
+      std::cout << "Active Threads: ";
+      for (const auto &pair : sets->activeThreads) {
+        std::cout << pair.first << ": ";
+        for (const std::string &tid : pair.second) {
+          std::cout << tid << ", ";
+        }
+      }
+      std::cout << std::endl;
+
+      std::cout << "Finished Threads: ";
+      for (const std::string &tid : sets->finishedThreads) {
         std::cout << tid << ", ";
       }
+      std::cout << std::endl;
+      std::cout << std::endl;
     }
-    std::cout << std::endl;
-
-    std::cout << "Finished Threads: ";
-    for (const std::string &tid : sets->finishedThreads) {
-      std::cout << tid << ", ";
-    }
-    std::cout << std::endl;
-    std::cout << std::endl;
   }
 }

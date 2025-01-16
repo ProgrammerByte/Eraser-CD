@@ -7,6 +7,7 @@
 #include "endif_node.h"
 #include "endwhile_node.h"
 #include "function_call_node.h"
+#include "function_variable_locksets.h"
 #include "graph_visualizer.h"
 #include "if_node.h"
 #include "lock_node.h"
@@ -18,6 +19,7 @@
 #include "thread_create_node.h"
 #include "thread_join_node.h"
 #include "unlock_node.h"
+#include "variable_locksets.h"
 #include "write_node.h"
 #include <clang-c/Index.h>
 #include <iostream>
@@ -553,7 +555,16 @@ int main() {
   DeltaLockset *deltaLockset = new DeltaLockset(callGraph, functionEraserSets);
   deltaLockset->updateLocksets(funcCfgs, functions);
 
+  FunctionVariableLocksets *functionVariableLocksets =
+      new FunctionVariableLocksets(db);
+
+  VariableLocksets *variableLocksets =
+      new VariableLocksets(callGraph, functionVariableLocksets);
+
+  variableLocksets->updateLocksets(funcCfgs, functions);
+
   functionEraserSets->markFunctionEraserSetsAsOld();
+  functionVariableLocksets->markFunctionVariableLocksetsAsOld();
 
   // staticEraser->testFunction(funcCfgs, "main");
 

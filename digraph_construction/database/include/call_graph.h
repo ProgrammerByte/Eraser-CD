@@ -15,6 +15,8 @@ public:
   void addEdge(std::string caller, std::string callee, bool onThread);
   std::vector<std::string>
   deltaLocksetOrdering(std::vector<std::string> functions);
+  std::vector<std::string>
+  functionVariableLocksetsOrdering(std::vector<std::string> functions);
   bool shouldVisitNode(std::string funcName);
 
 private:

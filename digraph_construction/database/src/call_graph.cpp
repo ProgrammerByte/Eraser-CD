@@ -203,6 +203,14 @@ CallGraph::deltaLocksetOrdering(std::vector<std::string> functions) {
   return traverseGraph(true);
 }
 
+std::vector<std::string> CallGraph::functionVariableLocksetsOrdering(
+    std::vector<std::string> functions) {
+  // TODO - INCLUDE PARENTS OF FUNCTIONS WITH CHANGED DELTA LOCKSETS HERE
+  // LATER!!!
+  markNodes(functions);
+  return traverseGraph();
+}
+
 // bottom up only!!!
 bool CallGraph::shouldVisitNode(std::string funcName) {
   sqlite3_stmt *stmt;

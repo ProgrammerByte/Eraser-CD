@@ -7,6 +7,7 @@
 #include "eraser_sets.h"
 #include "function_call_node.h"
 #include "function_eraser_sets.h"
+#include "graph_node.h"
 #include "if_node.h"
 #include "lock_node.h"
 #include "read_node.h"
@@ -18,50 +19,6 @@
 #include "unlock_node.h"
 #include "while_node.h"
 #include "write_node.h"
-
-struct CompareGraphNode {
-  bool operator()(const GraphNode *a, const GraphNode *b) {
-    return a->id > b->id;
-  }
-};
-
-struct VariableLocks
-    : public std::unordered_map<std::string, std::set<std::string>> {
-  VariableLocks &operator*=(const VariableLocks &other) {
-    for (auto &pair : other) {
-      if (find(pair.first) != end()) {
-        // If the key exists in both sets, intersect the sets
-        at(pair.first) *= pair.second;
-      } else {
-        // If the key only exists in the other set, add it to this set
-        insert(pair);
-      }
-    }
-    return *this;
-  }
-
-  VariableLocks operator*(const VariableLocks &other) const {
-    VariableLocks result = *this;
-    return result *= other;
-  }
-
-  VariableLocks &operator+=(const VariableLocks &other) {
-    for (auto it = begin(); it != end();) {
-      if (other.find(it->first) != end()) {
-        it->second += other.at(it->first);
-        ++it;
-      } else {
-        erase(it->first);
-      }
-    }
-    return *this;
-  }
-
-  VariableLocks operator+(const VariableLocks &other) const {
-    VariableLocks result = *this;
-    return result += other;
-  }
-};
 
 class DeltaLockset {
 public:

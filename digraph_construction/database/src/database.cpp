@@ -147,20 +147,11 @@ void Database::createTables() {
   // TODO - THIS NEEDS TO BE USED FOR EVICTING CACHE IN TOP DOWN STAGE I.E.
   // GARBAGE COLLECTION VIA REFERENCE COUNTING
   createTable(R"(
-    CREATE TABLE function_reachability (
-      funcname TEXT,
-      testname TEXT,
-      count INTEGER,
-      UNIQUE(funcname, testname)
-    );
-  )",
-              "function_reachability");
-
-  createTable(R"(
     CREATE TABLE function_variable_locksets (
       id INTEGER PRIMARY KEY,
       funcname TEXT,
       testname TEXT,
+      recently_changed BOOLEAN DEFAULT TRUE,
       UNIQUE(funcname, testname)
     );
   )",
@@ -177,15 +168,27 @@ void Database::createTables() {
               "function_variable_locksets");
 
   createTable(R"(
-    CREATE TABLE function_variable_locksets_inputs (
-      function_variable_locksets_id INTEGER,
-      caller TEXT,
-      lock TEXT,
-      FOREIGN KEY (function_variable_locksets_id) REFERENCES function_variable_locksets(id) ON DELETE CASCADE,
-      UNIQUE(function_variable_locksets_id, caller, lock)
-    );
-  )",
-              "function_variable_locksets_inputs");
+     CREATE TABLE function_variable_locksets_callers (
+        id INTEGER PRIMARY KEY,
+        function_variable_locksets_id INTEGER,
+        caller TEXT,
+        FOREIGN KEY (function_variable_locksets_id) REFERENCES
+        function_variable_locksets(id) ON DELETE CASCADE,
+        UNIQUE(function_variable_locksets_id, caller)
+     );
+   )",
+              "function_variable_locksets_callers");
+
+  createTable(R"(
+     CREATE TABLE function_variable_locksets_callers_locks (
+        function_variable_locksets_callers_id INTEGER,
+        lock TEXT,
+        FOREIGN KEY (function_variable_locksets_callers_id) REFERENCES
+        function_variable_locksets_callers(id) ON DELETE CASCADE,
+        UNIQUE(function_variable_locksets_callers_id, lock)
+     );
+   )",
+              "function_variable_locksets_callers_locks");
 
   createTable(R"(
     CREATE TABLE function_variable_locksets_outputs (
