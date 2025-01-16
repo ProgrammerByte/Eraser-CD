@@ -12,7 +12,7 @@ public:
   explicit CallGraph(Database *db);
   virtual ~CallGraph() = default;
   void addNode(std::string funcName);
-  void addEdge(std::string caller, std::string callee);
+  void addEdge(std::string caller, std::string callee, bool onThread);
   std::vector<std::string>
   deltaLocksetOrdering(std::vector<std::string> functions);
   bool shouldVisitNode(std::string funcName);

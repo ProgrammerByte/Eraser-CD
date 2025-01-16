@@ -247,7 +247,7 @@ void handleFunctionCall(CXCursor cursor, vector<GraphNode *> *nodesToAdd) {
       }
       // TODO - MAYBE CHANGE EDGE TYPE HERE?? ONLY AN OPTIMISATION FOR DELTA
       // LOCKSETS
-      callGraph->addEdge(caller, funcName);
+      callGraph->addEdge(caller, funcName, true);
     }
   } else if (funcName == "pthread_join") {
     string spelling = getNthArg(cursor, 1);
@@ -275,7 +275,7 @@ void handleFunctionCall(CXCursor cursor, vector<GraphNode *> *nodesToAdd) {
   } else {
     funcName = getFuncName(cursor, funcName);
     (*nodesToAdd).push_back(new FunctionCallNode(funcName));
-    callGraph->addEdge(caller, funcName);
+    callGraph->addEdge(caller, funcName, false);
   }
 }
 

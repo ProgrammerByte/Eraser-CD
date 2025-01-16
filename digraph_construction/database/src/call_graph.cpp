@@ -12,14 +12,15 @@ void CallGraph::addNode(std::string funcName) {
   db->runStatement(stmt);
 }
 
-void CallGraph::addEdge(std::string caller, std::string callee) {
+void CallGraph::addEdge(std::string caller, std::string callee, bool onThread) {
   if (caller != callee) {
-    std::string query =
-        "INSERT OR IGNORE INTO adjacency_matrix (funcname1, funcname2) "
-        "VALUES (?, ?);";
+    std::string query = "INSERT OR IGNORE INTO adjacency_matrix (funcname1, "
+                        "funcname2, on_thread) "
+                        "VALUES (?, ?, ?);";
 
     sqlite3_stmt *stmt;
-    std::vector<std::string> params = {caller, callee};
+    std::vector<std::string> params = {caller, callee,
+                                       db->createBoolean(onThread)};
     db->prepareStatement(stmt, query, params);
     db->runStatement(stmt);
   } else {
@@ -76,7 +77,8 @@ void CallGraph::markNodes(std::vector<std::string> &startNodes,
           " SELECT funcname2 AS funcname, COUNT(*) AS cnt FROM "
           "adjacency_matrix "
           " JOIN nodes_table ON nodes_table.funcname = "
-          " adjacency_matrix.funcname2 WHERE adjacency_matrix.funcname1 IN " +
+          " adjacency_matrix.funcname2 WHERE adjacency_matrix.on_thread = 0 "
+          " AND adjacency_matrix.funcname1 IN " +
           db->createTupleList(q) +
           " GROUP BY funcname2"
           "),"
@@ -167,7 +169,8 @@ std::vector<std::string> CallGraph::traverseGraph(bool reverse = false) {
           " SELECT funcname2 AS funcname, COUNT(*) AS cnt FROM "
           "adjacency_matrix "
           " JOIN nodes_table ON nodes_table.funcname = "
-          " adjacency_matrix.funcname2 WHERE adjacency_matrix.funcname1 IN " +
+          " adjacency_matrix.funcname2 WHERE adjacency_matrix.on_thread = 0 "
+          "AND adjacency_matrix.funcname1 IN " +
           db->createTupleList(q) +
           " GROUP BY funcname2"
           "),"

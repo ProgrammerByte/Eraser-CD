@@ -65,9 +65,10 @@ void Database::createTables() {
     CREATE TABLE adjacency_matrix (
       funcname1 TEXT,
       funcname2 TEXT,
+      on_thread BOOLEAN DEFAULT FALSE,
       FOREIGN KEY (funcname1) REFERENCES nodes(funcname) ON DELETE CASCADE,
       FOREIGN KEY (funcname2) REFERENCES nodes(funcname) ON DELETE CASCADE,
-      UNIQUE(funcname1, funcname2)
+      UNIQUE(funcname1, funcname2, on_thread)
     );
   )",
               "adjacency_matrix");
