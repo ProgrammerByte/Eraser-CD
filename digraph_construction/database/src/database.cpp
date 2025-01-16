@@ -143,36 +143,69 @@ void Database::createTables() {
   )",
               "active_threads");
 
+  // TODO - THIS NEEDS TO BE USED FOR EVICTING CACHE IN TOP DOWN STAGE I.E.
+  // GARBAGE COLLECTION VIA REFERENCE COUNTING
+  createTable(R"(
+    CREATE TABLE function_reachability (
+      funcname TEXT,
+      testname TEXT,
+      count INTEGER,
+      UNIQUE(funcname, testname)
+    );
+  )",
+              "function_reachability");
+
   createTable(R"(
     CREATE TABLE function_variable_locksets (
       id INTEGER PRIMARY KEY,
       funcname TEXT,
-      stringified_input_locks TEXT,
-      used BOOLEAN DEFAULT TRUE
+      testname TEXT,
+      UNIQUE(funcname, testname)
     );
   )",
               "function_variable_locksets");
 
   createTable(R"(
+    CREATE TABLE function_variable_locksets_combined_inputs (
+      function_variable_locksets_id INTEGER,
+      lock TEXT,
+      FOREIGN KEY (function_variable_locksets_id) REFERENCES function_variable_locksets(id) ON DELETE CASCADE,
+      UNIQUE(function_variable_locksets_id, lock)
+    );
+  )",
+              "function_variable_locksets");
+
+  createTable(R"(
+    CREATE TABLE function_variable_locksets_inputs (
+      function_variable_locksets_id INTEGER,
+      caller TEXT,
+      lock TEXT,
+      FOREIGN KEY (function_variable_locksets_id) REFERENCES function_variable_locksets(id) ON DELETE CASCADE,
+      UNIQUE(function_variable_locksets_id, caller, lock)
+    );
+  )",
+              "function_variable_locksets_inputs");
+
+  createTable(R"(
     CREATE TABLE function_variable_locksets_outputs (
+      function_variable_locksets_id INTEGER,
       varname TEXT,
       lock TEXT,
-      function_variable_locksets_id INTEGER,
       FOREIGN KEY (function_variable_locksets_id) REFERENCES function_variable_locksets(id) ON DELETE CASCADE,
-      UNIQUE(varname, lock, function_variable_locksets_id)
+      UNIQUE(function_variable_locksets_id, varname, lock)
     );
   )",
               "function_variable_locksets_outputs");
 
   createTable(R"(
-    CREATE TABLE function_variable_locksets_variables (
+    CREATE TABLE function_variable_direct_accesses (
+      funcname TEXT,
       varname TEXT,
-      function_variable_locksets_id INTEGER,
-      FOREIGN KEY (function_variable_locksets_id) REFERENCES function_variable_locksets(id) ON DELETE CASCADE,
-      UNIQUE(varname, function_variable_locksets_id)
+      type TEXT CHECK(type IN ('read', 'write')),
+      UNIQUE(funcname, varname, type)
     );
   )",
-              "function_variable_locksets");
+              "function_variable_direct_accesses");
 }
 
 Database::Database() {
