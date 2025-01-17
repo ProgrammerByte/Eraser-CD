@@ -77,8 +77,8 @@ void CallGraph::markNodes(std::vector<std::string> &startNodes,
           " SELECT funcname2 AS funcname, COUNT(*) AS cnt FROM "
           "adjacency_matrix "
           " JOIN nodes_table ON nodes_table.funcname = "
-          " adjacency_matrix.funcname2 WHERE adjacency_matrix.on_thread = 0 "
-          " AND adjacency_matrix.funcname1 IN " +
+          " adjacency_matrix.funcname2 WHERE "
+          " adjacency_matrix.funcname1 IN " +
           db->createTupleList(q) +
           " GROUP BY funcname2"
           "),"
@@ -169,8 +169,8 @@ std::vector<std::string> CallGraph::traverseGraph(bool reverse = false) {
           " SELECT funcname2 AS funcname, COUNT(*) AS cnt FROM "
           "adjacency_matrix "
           " JOIN nodes_table ON nodes_table.funcname = "
-          " adjacency_matrix.funcname2 WHERE adjacency_matrix.on_thread = 0 "
-          "AND adjacency_matrix.funcname1 IN " +
+          " adjacency_matrix.funcname2 WHERE "
+          " adjacency_matrix.funcname1 IN " +
           db->createTupleList(q) +
           " GROUP BY funcname2"
           "),"

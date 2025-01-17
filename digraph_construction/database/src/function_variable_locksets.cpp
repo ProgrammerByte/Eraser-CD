@@ -94,16 +94,19 @@ FunctionInputs FunctionVariableLocksets::updateAndCheckCombinedInputs() {
   }
 
   sqlite3_stmt *stmt;
-  std::string query =
-      "SELECT * FROM function_variable_locksets WHERE funcname = ?;";
+  std::string query = "SELECT id, testname, recently_changed FROM "
+                      "function_variable_locksets WHERE funcname = ?;";
   std::vector<std::string> params = {currFunc};
   db->prepareStatement(stmt, query, params);
   std::vector<std::string> ids = {};
   std::vector<std::string> testnames = {};
+  std::vector<bool> recentlyChanged = {};
   while (sqlite3_step(stmt) == SQLITE_ROW) {
     ids.push_back(reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0)));
     testnames.push_back(
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2)));
+        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1)));
+    recentlyChanged.push_back(db->retrieveBoolean(
+        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2))));
   }
   sqlite3_finalize(stmt);
   functionInputs.reachableTests = testnames;
@@ -111,27 +114,35 @@ FunctionInputs FunctionVariableLocksets::updateAndCheckCombinedInputs() {
   for (int i = 0; i < ids.size(); i++) {
     std::string id = ids[i];
     std::string testname = testnames[i];
+    bool changed = recentlyChanged[i];
     std::set<std::string> oldCombinedLocks = {};
-
-    query = "SELECT lock FROM function_variable_locksets_combined_inputs WHERE "
-            "function_variable_locksets_id = ?;";
-    params = {id};
-    db->prepareStatement(stmt, query, params);
-    while (sqlite3_step(stmt) == SQLITE_ROW) {
-      oldCombinedLocks.insert(
-          reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0)));
+    if (changed) {
+      query = "DELETE FROM function_variable_locksets_combined_inputs WHERE "
+              "function_variable_locksets_id = ?;";
+      params = {id};
+      db->prepareStatement(stmt, query, params);
+      db->runStatement(stmt);
+    } else {
+      query =
+          "SELECT lock FROM function_variable_locksets_combined_inputs WHERE "
+          "function_variable_locksets_id = ?;";
+      params = {id};
+      db->prepareStatement(stmt, query, params);
+      while (sqlite3_step(stmt) == SQLITE_ROW) {
+        oldCombinedLocks.insert(
+            reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0)));
+      }
+      sqlite3_finalize(stmt);
     }
-    sqlite3_finalize(stmt);
 
     std::unordered_map<std::string, std::set<std::string>> callerLocksets = {};
     std::vector<std::string> callers = {};
 
-    query = "SELECT funcname2 FROM adjacency_matrix AS am JOIN "
-            "function_variable_locksets AS fvl ON am.funcname1 = fvl.funcname "
-            "WHERE fvl.testname = ? AND fvl.recently_changed = 1;";
-    // TODO - REMOVE recently_changed CHECK IF FUNCTION ITSELF HAS CHANGED!!!
+    query = "SELECT funcname1 FROM adjacency_matrix AS am JOIN "
+            "function_variable_locksets AS fvl ON am.funcname2 = fvl.funcname "
+            "WHERE fvl.id = ?;";
 
-    params = {testname};
+    params = {id};
     db->prepareStatement(stmt, query, params);
     while (sqlite3_step(stmt) == SQLITE_ROW) {
       std::string caller =
@@ -150,8 +161,8 @@ FunctionInputs FunctionVariableLocksets::updateAndCheckCombinedInputs() {
       db->prepareStatement(stmt, query, params);
       db->runStatement(stmt);
 
-      if (!oldCombinedLocks.empty()) {
-        functionInputs.changedTests.insert({id, {}});
+      if (changed || !oldCombinedLocks.empty()) {
+        functionInputs.changedTests.insert({testname, {}});
       }
       continue;
     }
@@ -159,8 +170,7 @@ FunctionInputs FunctionVariableLocksets::updateAndCheckCombinedInputs() {
     query =
         "SELECT caller, lock FROM function_variable_locksets_callers AS fvlc "
         "JOIN function_variable_locksets_callers_locks AS fvlcl ON fvlc.id = "
-        "function_variable_locksets_callers_locks.function_variable_locksets_"
-        "callers_id WHERE "
+        "fvlcl.function_variable_locksets_callers_id WHERE "
         "function_variable_locksets_id = ?;";
     params = {id};
     db->prepareStatement(stmt, query, params);
@@ -178,7 +188,7 @@ FunctionInputs FunctionVariableLocksets::updateAndCheckCombinedInputs() {
       newCombinedLocks *= callerLocksets[callers[i]];
     }
 
-    if (newCombinedLocks != oldCombinedLocks) {
+    if (changed || newCombinedLocks != oldCombinedLocks) {
       query = "DELETE FROM function_variable_locksets_combined_inputs WHERE "
               "function_variable_locksets_id = ?;";
       params = {id};
@@ -192,13 +202,7 @@ FunctionInputs FunctionVariableLocksets::updateAndCheckCombinedInputs() {
         db->prepareStatement(stmt, query, params);
         db->runStatement(stmt);
       }
-      functionInputs.changedTests.insert({id, newCombinedLocks});
-
-      query = "UPDATE function_variable_locksets SET recently_updated = 1 "
-              "WHERE id = ?;";
-      params = {id};
-      db->prepareStatement(stmt, query, params);
-      db->runStatement(stmt);
+      functionInputs.changedTests.insert({testname, newCombinedLocks});
     }
   }
   return functionInputs;
@@ -226,10 +230,11 @@ void FunctionVariableLocksets::addFuncCallLocksets(
     std::string funcName = pair.first;
     std::set<std::string> locks = pair.second;
 
-    query = "SELECT id FROM function_variable_locksets_callers AS fvlc JOIN "
-            "function_variable_locksets AS fvl ON fvl.id = "
-            "fvlc.function_variable_locksets_id WHERE caller = "
-            "? AND testname = ?;";
+    query =
+        "SELECT fvlc.id FROM function_variable_locksets_callers AS fvlc JOIN "
+        "function_variable_locksets AS fvl ON fvl.id = "
+        "fvlc.function_variable_locksets_id WHERE caller = "
+        "? AND testname = ?;";
     params = {currFunc, currTest};
     db->prepareStatement(stmt, query, params);
     std::string id = "";
@@ -250,10 +255,11 @@ void FunctionVariableLocksets::addFuncCallLocksets(
       db->prepareStatement(stmt, query, params);
       db->runStatement(stmt);
 
-      query = "SELECT id FROM function_variable_locksets_callers AS fvlc JOIN "
-              "function_variable_locksets AS fvl ON fvl.id = "
-              "fvlc.function_variable_locksets_id WHERE caller = "
-              "? AND testname = ?;";
+      query =
+          "SELECT fvlc.id FROM function_variable_locksets_callers AS fvlc JOIN "
+          "function_variable_locksets AS fvl ON fvl.id = "
+          "fvlc.function_variable_locksets_id WHERE caller = "
+          "? AND testname = ?;";
       params = {currFunc, currTest};
       db->prepareStatement(stmt, query, params);
       if (sqlite3_step(stmt) == SQLITE_ROW) {

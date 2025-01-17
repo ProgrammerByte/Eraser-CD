@@ -21,6 +21,7 @@ public:
 
   std::string createTupleList(std::vector<std::string> &nodes);
   std::string createBoolean(bool value);
+  bool retrieveBoolean(std::string value);
 
 private:
   std::string dbName = "eraser.db";

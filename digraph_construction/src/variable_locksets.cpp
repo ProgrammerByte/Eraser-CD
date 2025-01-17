@@ -43,8 +43,14 @@ bool VariableLocksets::handleNode(FunctionCallNode *node,
 bool VariableLocksets::handleNode(ThreadCreateNode *node,
                                   std::set<std::string> &locks) {
   std::string varName = node->varName;
+  std::string functionName = node->functionName;
   if (node->global && varName != "") {
     variableWrite(varName, locks);
+  }
+  if (funcCallLocksets.find(functionName) == funcCallLocksets.end()) {
+    funcCallLocksets.insert({functionName, {}});
+  } else {
+    funcCallLocksets[functionName] = {};
   }
   return true;
 };
@@ -96,8 +102,6 @@ bool VariableLocksets::handleNode(GraphNode *node,
     return handleNode(readNode, locks);
   } else if (auto *writeNode = dynamic_cast<WriteNode *>(node)) {
     return handleNode(writeNode, locks);
-  } else if (auto *returnNode = dynamic_cast<ReturnNode *>(node)) {
-    return handleNode(returnNode, locks);
   }
   return true;
 };

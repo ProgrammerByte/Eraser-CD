@@ -242,4 +242,6 @@ std::string Database::createBoolean(bool value) {
   return "0";
 }
 
+bool Database::retrieveBoolean(std::string value) { return value == "1"; }
+
 Database::~Database() { sqlite3_close(db); }
