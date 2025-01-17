@@ -22,6 +22,7 @@ public:
   void markFunctionEraserSetsAsOld();
   void saveFunctionDirectVariableAccesses(std::set<std::string> &reads,
                                           std::set<std::string> &writes);
+  void saveRecursiveUnlocks(std::set<std::string> &unlocks);
 
 private:
   bool checkCurrFuncInDb();

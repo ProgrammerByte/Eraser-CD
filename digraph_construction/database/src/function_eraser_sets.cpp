@@ -332,3 +332,16 @@ void FunctionEraserSets::saveFunctionDirectVariableAccesses(
     db->runStatement(stmt);
   }
 }
+
+void FunctionEraserSets::saveRecursiveUnlocks(std::set<std::string> &unlocks) {
+  sqlite3_stmt *stmt;
+  std::string query = "INSERT OR IGNORE INTO function_recursive_unlocks "
+                      "(funcname, varname) VALUES (?, ?);";
+  std::vector<std::string> params;
+
+  for (const std::string &unlock : unlocks) {
+    params = {currFunc, unlock};
+    db->prepareStatement(stmt, query, params);
+    db->runStatement(stmt);
+  }
+}

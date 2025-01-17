@@ -31,10 +31,12 @@ bool VariableLocksets::handleNode(FunctionCallNode *node,
                                   std::set<std::string> &locks) {
   // TODO - MARK CURRENT NODES IN FOR QUEUE FOR CALLEE!!!
   std::string functionName = node->functionName;
-  if (funcCallLocksets.find(functionName) == funcCallLocksets.end()) {
-    funcCallLocksets.insert({functionName, locks});
-  } else {
-    funcCallLocksets[functionName] *= locks;
+  if (functionName != currFunc) {
+    if (funcCallLocksets.find(functionName) == funcCallLocksets.end()) {
+      funcCallLocksets.insert({functionName, locks});
+    } else {
+      funcCallLocksets[functionName] *= locks;
+    }
   }
   functionVariableLocksets->applyDeltaLockset(locks, functionName);
   return true;
@@ -121,7 +123,9 @@ void VariableLocksets::handleFunction(GraphNode *startNode,
   funcCallLocksets = {};
   forwardQueue.push(startNode);
   nodeLocks = {};
-  nodeLocks.insert({startNode, startLocks});
+  nodeLocks.insert(
+      {startNode,
+       startLocks - functionVariableLocksets->getFunctionRecursiveUnlocks()});
   int lastId = -1;
 
   while (!forwardQueue.empty() || !backwardQueue.empty()) {

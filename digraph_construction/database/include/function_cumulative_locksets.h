@@ -15,11 +15,11 @@ struct TestVariableLocks
     : public std::unordered_map<std::string, VariableLocks> {
   TestVariableLocks &operator*=(const TestVariableLocks &other) {
     for (auto it = begin(); it != end();) {
-      if (other.find(it->first) != end()) {
+      if (other.find(it->first) != other.end()) {
         it->second *= other.at(it->first);
         ++it;
       } else {
-        erase(it->first);
+        it = erase(it);
       }
     }
     return *this;

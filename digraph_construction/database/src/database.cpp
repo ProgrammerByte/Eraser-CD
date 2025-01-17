@@ -94,6 +94,16 @@ void Database::createTables() {
               "function_locks");
 
   createTable(R"(
+    CREATE TABLE function_recursive_unlocks (
+      funcname TEXT,
+      varname TEXT,
+      FOREIGN KEY (funcname) REFERENCES function_eraser_sets(funcname) ON DELETE CASCADE,
+      UNIQUE(funcname, varname)
+    );
+  )",
+              "function_recursive_unlocks");
+
+  createTable(R"(
     CREATE TABLE function_vars (
       funcname TEXT,
       varname TEXT,

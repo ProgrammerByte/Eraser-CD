@@ -269,7 +269,7 @@ void FunctionVariableLocksets::addFuncCallLocksets(
       id = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
     }
 
-    query = "INSERT INTO function_variable_locksets_callers_locks "
+    query = "INSERT OR IGNORE INTO function_variable_locksets_callers_locks "
             "(function_variable_locksets_callers_id, lock) VALUES (?, ?);";
     for (const std::string &lock : locks) {
       params = {id, lock};
@@ -356,4 +356,20 @@ void FunctionVariableLocksets::markFunctionVariableLocksetsAsOld() {
       "UPDATE function_variable_cumulative_locksets SET recently_changed = 0;";
   db->prepareStatement(stmt, query);
   db->runStatement(stmt);
+}
+
+std::set<std::string> FunctionVariableLocksets::getFunctionRecursiveUnlocks() {
+  sqlite3_stmt *stmt;
+  std::string query =
+      "SELECT varname FROM function_recursive_unlocks WHERE funcname = ?;";
+  std::vector<std::string> params = {currFunc};
+  db->prepareStatement(stmt, query, params);
+  std::set<std::string> unlocks;
+  while (sqlite3_step(stmt) == SQLITE_ROW) {
+    std::string varName =
+        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
+    unlocks.insert(varName);
+  }
+  sqlite3_finalize(stmt);
+  return unlocks;
 }

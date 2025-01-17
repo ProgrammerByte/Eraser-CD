@@ -72,6 +72,7 @@ bool DeltaLockset::recursiveFunctionCall(std::string functionName,
       nodeSets[startNode] = nextSets;
       backwardQueue.push_back(startNode);
     }
+    functionEraserSets->saveRecursiveUnlocks(sets.unlocks);
     if (!recursive) {
       return true;
     }
