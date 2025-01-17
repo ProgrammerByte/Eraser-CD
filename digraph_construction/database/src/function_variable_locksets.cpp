@@ -80,7 +80,7 @@ void FunctionVariableLocksets::applyDeltaLockset(std::set<std::string> &locks,
   } else {
     extractFunctionLocksFromDb(funcName, dbLocks, dbUnlocks);
   }
-  locks *= dbLocks;
+  locks += dbLocks;
   locks -= dbUnlocks;
 }
 
@@ -226,9 +226,36 @@ void FunctionVariableLocksets::addFuncCallLocksets(
   std::string query;
   std::vector<std::string> params;
 
+  query = "SELECT fvlc.id FROM function_variable_locksets_callers AS fvlc JOIN "
+          "function_variable_locksets AS fvl ON fvl.id = "
+          "fvlc.function_variable_locksets_id WHERE caller = "
+          "? AND testname = ?;";
+  params = {currFunc, currTest};
+  db->prepareStatement(stmt, query, params);
+  std::vector<std::string> ids = {};
+  if (sqlite3_step(stmt) == SQLITE_ROW) {
+    ids.push_back(reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0)));
+  }
+  sqlite3_finalize(stmt);
+
+  for (const std::string &id : ids) {
+    query = "DELETE FROM function_variable_locksets_callers WHERE "
+            "function_variable_locksets_callers_id = ?";
+    params = {id};
+    db->prepareStatement(stmt, query, params);
+    db->runStatement(stmt);
+  }
+
   for (const auto &pair : funcCallLocksets) {
     std::string funcName = pair.first;
     std::set<std::string> locks = pair.second;
+
+    std::string funcId = getId(funcName, currTest);
+    query = "INSERT INTO function_variable_locksets_callers "
+            "(function_variable_locksets_id, caller) VALUES (?, ?)";
+    params = {funcId, currFunc};
+    db->prepareStatement(stmt, query, params);
+    db->runStatement(stmt);
 
     query =
         "SELECT fvlc.id FROM function_variable_locksets_callers AS fvlc JOIN "
@@ -237,34 +264,9 @@ void FunctionVariableLocksets::addFuncCallLocksets(
         "? AND testname = ?;";
     params = {currFunc, currTest};
     db->prepareStatement(stmt, query, params);
-    std::string id = "";
+    std::string id;
     if (sqlite3_step(stmt) == SQLITE_ROW) {
       id = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
-    }
-    if (id != "") {
-      query = "DELETE FROM function_variable_locksets_callers_locks WHERE "
-              "function_variable_locksets_callers_id = ?";
-      params = {id};
-      db->prepareStatement(stmt, query, params);
-      db->runStatement(stmt);
-    } else {
-      std::string funcId = getId(funcName, currTest);
-      query = "INSERT INTO function_variable_locksets_callers "
-              "(function_variable_locksets_id, caller) VALUES (?, ?)";
-      params = {funcId, currFunc};
-      db->prepareStatement(stmt, query, params);
-      db->runStatement(stmt);
-
-      query =
-          "SELECT fvlc.id FROM function_variable_locksets_callers AS fvlc JOIN "
-          "function_variable_locksets AS fvl ON fvl.id = "
-          "fvlc.function_variable_locksets_id WHERE caller = "
-          "? AND testname = ?;";
-      params = {currFunc, currTest};
-      db->prepareStatement(stmt, query, params);
-      if (sqlite3_step(stmt) == SQLITE_ROW) {
-        id = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
-      }
     }
 
     query = "INSERT INTO function_variable_locksets_callers_locks "

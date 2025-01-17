@@ -121,7 +121,7 @@ void VariableLocksets::handleFunction(GraphNode *startNode,
   funcCallLocksets = {};
   forwardQueue.push(startNode);
   nodeLocks = {};
-  nodeLocks.insert({startNode, {}});
+  nodeLocks.insert({startNode, startLocks});
   int lastId = -1;
 
   while (!forwardQueue.empty() || !backwardQueue.empty()) {
@@ -184,6 +184,8 @@ void VariableLocksets::updateLocksets(
         functionVariableLocksets->updateAndCheckCombinedInputs();
     std::unordered_map<std::string, std::set<std::string>> combinedInputs =
         functionInputs.changedTests;
+    // TODO - use functionInputs.reachableTests at some point!!! - revise
+    // this!!!
 
     std::cout << "Function: " << funcName << std::endl;
     for (const auto &pair : combinedInputs) {
