@@ -48,10 +48,6 @@ private:
 
   bool variableRead(std::string varName, std::set<std::string> &locks);
   bool variableWrite(std::string varName, std::set<std::string> &locks);
-  void sharedVariableAccessed(std::string varName,
-                              std::set<std::string> &locks);
-
-  void threadFinished(std::string varName, std::set<std::string> &locks);
 
   bool handleNode(FunctionCallNode *node, std::set<std::string> &locks);
   bool handleNode(ThreadCreateNode *node, std::set<std::string> &locks);

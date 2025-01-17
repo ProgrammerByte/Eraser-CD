@@ -305,15 +305,14 @@ void FunctionVariableLocksets::addVariableLocksets(
   }
 }
 
-std::unordered_map<std::string, std::set<std::string>>
-FunctionVariableLocksets::getVariableLocks() {
+VariableLocks FunctionVariableLocksets::getVariableLocks() {
   sqlite3_stmt *stmt;
   std::string query =
       "SELECT varname FROM function_variable_direct_accesses WHERE "
       "funcname = ?;";
   std::vector<std::string> params = {currFunc};
   db->prepareStatement(stmt, query, params);
-  std::unordered_map<std::string, std::set<std::string>> variableLocks;
+  VariableLocks variableLocks;
   while (sqlite3_step(stmt) == SQLITE_ROW) {
     std::string varName =
         reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
@@ -339,10 +338,22 @@ FunctionVariableLocksets::getVariableLocks() {
   return variableLocks;
 }
 
+VariableLocks FunctionVariableLocksets::getVariableLocks(std::string func,
+                                                         std::string id) {
+  currFunc = func;
+  currId = id;
+  return getVariableLocks();
+}
+
 void FunctionVariableLocksets::markFunctionVariableLocksetsAsOld() {
   sqlite3_stmt *stmt;
   std::string query =
       "UPDATE function_variable_locksets SET recently_changed = 0;";
+  db->prepareStatement(stmt, query);
+  db->runStatement(stmt);
+
+  query =
+      "UPDATE function_variable_cumulative_locksets SET recently_changed = 0;";
   db->prepareStatement(stmt, query);
   db->runStatement(stmt);
 }

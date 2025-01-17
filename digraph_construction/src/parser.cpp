@@ -2,11 +2,13 @@
 #include "call_graph.h"
 #include "construction_environment.h"
 #include "continue_node.h"
+#include "cumulative_locksets.h"
 #include "database.h"
 #include "delta_lockset.h"
 #include "endif_node.h"
 #include "endwhile_node.h"
 #include "function_call_node.h"
+#include "function_cumulative_locksets.h"
 #include "function_variable_locksets.h"
 #include "graph_visualizer.h"
 #include "if_node.h"
@@ -558,10 +560,19 @@ int main() {
   FunctionVariableLocksets *functionVariableLocksets =
       new FunctionVariableLocksets(db);
 
+  FunctionCumulativeLocksets *functionCumulativeLocksets =
+      new FunctionCumulativeLocksets(db, functionVariableLocksets);
+
   VariableLocksets *variableLocksets =
       new VariableLocksets(callGraph, functionVariableLocksets);
 
+  CumulativeLocksets *cumulativeLocksets =
+      new CumulativeLocksets(callGraph, functionCumulativeLocksets);
+
+  // TODO - INCLUDE PARENTS OF CHANGED DELTA LOCKSETS HERE!!!
   variableLocksets->updateLocksets(funcCfgs, functions);
+  // TODO - SELECT WHERE function_variable_locksets.recently_changed = 1
+  cumulativeLocksets->updateLocksets(funcCfgs, functions);
 
   functionEraserSets->markFunctionEraserSetsAsOld();
   functionVariableLocksets->markFunctionVariableLocksetsAsOld();

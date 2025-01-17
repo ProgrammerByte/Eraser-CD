@@ -27,7 +27,8 @@ public:
       std::unordered_map<std::string, std::set<std::string>> funcCallLocksets);
   void addVariableLocksets(
       std::unordered_map<std::string, std::set<std::string>> variableLocksets);
-  std::unordered_map<std::string, std::set<std::string>> getVariableLocks();
+  VariableLocks getVariableLocks();
+  VariableLocks getVariableLocks(std::string func, std::string id);
   void markFunctionVariableLocksetsAsOld();
 
 private:

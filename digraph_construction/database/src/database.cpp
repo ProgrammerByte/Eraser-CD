@@ -210,6 +210,38 @@ void Database::createTables() {
     );
   )",
               "function_variable_direct_accesses");
+
+  createTable(R"(
+    CREATE TABLE function_variable_cumulative_locksets (
+      id INTEGER PRIMARY KEY,
+      funcname TEXT,
+      testname TEXT,
+      recently_changed BOOLEAN DEFAULT TRUE,
+      UNIQUE(funcname, testname)
+    );
+  )",
+              "function_variable_cumulative_locksets");
+
+  createTable(R"(
+    CREATE TABLE function_variable_cumulative_locksets_outputs (
+      function_variable_cumulative_locksets_id INTEGER,
+      varname TEXT,
+      lock TEXT,
+      FOREIGN KEY (function_variable_cumulative_locksets_id) REFERENCES function_variable_cumulative_locksets(id) ON DELETE CASCADE,
+      UNIQUE(function_variable_cumulative_locksets_id, varname, lock)
+    );
+  )",
+              "function_variable_cumulative_locksets_outputs");
+
+  createTable(R"(
+    CREATE TABLE function_variable_cumulative_accesses (
+      funcname TEXT,
+      varname TEXT,
+      type TEXT CHECK(type IN ('read', 'write')),
+      UNIQUE(funcname, varname, type)
+    );
+  )",
+              "function_variable_cumulative_accesses");
 }
 
 Database::Database() {
