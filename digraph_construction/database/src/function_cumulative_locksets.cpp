@@ -258,3 +258,27 @@ void FunctionCumulativeLocksets::updateFunctionCumulativeLocksets(
     insertFunctionCumulativeData(funcName, newCumulativeData);
   }
 }
+
+std::set<std::string> FunctionCumulativeLocksets::detectDataRaces() {
+  std::string funcName = "main";
+  std::string testName = "debug";
+
+  VariableLocks mainLocksets =
+      getFunctionCumulativeLocksets(funcName)[testName];
+
+  std::set<std::string> dataRaces = {};
+  sqlite3_stmt *stmt;
+  std::string query = "SELECT varname FROM function_vars WHERE funcname = ? "
+                      "AND type = 'shared_modified';";
+  std::vector<std::string> params = {funcName};
+  db->prepareStatement(stmt, query, params);
+  while (sqlite3_step(stmt) == SQLITE_ROW) {
+    std::string varName = std::string(
+        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0)));
+    if (mainLocksets.find(varName) == mainLocksets.end() ||
+        mainLocksets[varName].empty()) {
+      dataRaces.insert(varName);
+    }
+  }
+  return dataRaces;
+}

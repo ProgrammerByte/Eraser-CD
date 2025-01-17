@@ -13,7 +13,6 @@
 #include "graph_visualizer.h"
 #include "if_node.h"
 #include "lock_node.h"
-#include "over_approximated_static_eraser.h"
 #include "read_node.h"
 #include "return_node.h"
 #include "start_node.h"
@@ -551,9 +550,6 @@ int main() {
   GraphVisualizer *visualizer = new GraphVisualizer();
   visualizer->visualizeGraph(funcCfgs[functions[1]]);
 
-  OverApproximatedStaticEraser *staticEraser =
-      new OverApproximatedStaticEraser();
-
   DeltaLockset *deltaLockset = new DeltaLockset(callGraph, functionEraserSets);
   deltaLockset->updateLocksets(funcCfgs, functions);
 
@@ -578,6 +574,13 @@ int main() {
   functionVariableLocksets->markFunctionVariableLocksetsAsOld();
 
   // staticEraser->testFunction(funcCfgs, "main");
+  std::set<std::string> dataRaces =
+      functionCumulativeLocksets->detectDataRaces();
+
+  std::cout << "Variables with data races:" << std::endl;
+  for (const string &dataRace : dataRaces) {
+    cout << dataRace << endl;
+  }
 
   clang_disposeTranslationUnit(unit);
   clang_disposeIndex(index);

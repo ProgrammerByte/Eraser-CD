@@ -52,6 +52,7 @@ public:
   virtual ~FunctionCumulativeLocksets() = default;
   bool shouldVisitNode(std::string funcName);
   void updateFunctionCumulativeLocksets(std::string funcName);
+  std::set<std::string> detectDataRaces();
 
 private:
   std::set<std::string> getFunctionCumulativeAccesses(std::string funcName);
