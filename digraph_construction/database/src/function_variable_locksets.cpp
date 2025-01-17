@@ -36,12 +36,14 @@ std::string FunctionVariableLocksets::getId(std::string funcName,
   return id;
 }
 
-void FunctionVariableLocksets::startNewFunction(std::string funcName,
-                                                std::string testName) {
+void FunctionVariableLocksets::startNewFunction(std::string funcName) {
   currFunc = funcName;
+}
+
+void FunctionVariableLocksets::startNewTest(std::string testName) {
   currTest = testName;
   currFuncSets = {};
-  currId = getId(funcName, testName);
+  currId = getId(currFunc, testName);
 }
 
 void FunctionVariableLocksets::extractFunctionLocksFromDb(

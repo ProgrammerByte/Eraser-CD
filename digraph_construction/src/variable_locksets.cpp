@@ -115,7 +115,6 @@ void VariableLocksets::handleFunction(GraphNode *startNode,
                                       std::set<std::string> &startLocks) {
   variableLocksets = {};
   funcCallLocksets = {};
-  functionVariableLocksets->startNewFunction(currFunc, currTest);
   forwardQueue.push(startNode);
   nodeLocks = {};
   nodeLocks.insert({startNode, {}});
@@ -176,6 +175,7 @@ void VariableLocksets::updateLocksets(
       continue;
     }
     currFunc = funcName;
+    functionVariableLocksets->startNewFunction(currFunc);
     FunctionInputs functionInputs =
         functionVariableLocksets->updateAndCheckCombinedInputs();
     std::unordered_map<std::string, std::set<std::string>> combinedInputs =
@@ -184,6 +184,7 @@ void VariableLocksets::updateLocksets(
     std::cout << "Function: " << funcName << std::endl;
     for (const auto &pair : combinedInputs) {
       currTest = pair.first;
+      functionVariableLocksets->startNewTest(currTest);
       std::set<std::string> startLocks = pair.second;
       handleFunction(funcCfgs[funcName], startLocks);
 
