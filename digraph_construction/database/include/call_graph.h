@@ -18,6 +18,8 @@ public:
   std::vector<std::string>
   functionVariableLocksetsOrdering(std::vector<std::string> functions);
   bool shouldVisitNode(std::string funcName);
+  void markNodesAsStale(std::string fileName);
+  void deleteStaleNodes();
 
 private:
   Database *db;

@@ -465,9 +465,7 @@ void Parser::parseFile(const char *fileName) {
   startNode = nullptr;
 
   scopeStack.push_back(std::unordered_map<std::string, VariableInfo>());
-  scopeStack.push_back(std::unordered_map<std::string, VariableInfo>());
-  scopeStack.push_back(std::unordered_map<std::string, VariableInfo>());
-  scopeStack.push_back(std::unordered_map<std::string, VariableInfo>());
+  callGraph->markNodesAsStale(fileName);
 
   CXIndex index = clang_createIndex(0, 0);
   CXTranslationUnit unit = clang_parseTranslationUnit(

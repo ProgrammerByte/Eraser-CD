@@ -4,7 +4,9 @@ CallGraph::CallGraph(Database *db) : db(db){};
 
 void CallGraph::addNode(std::string funcName, std::string fileName) {
   std::string query =
-      "INSERT OR IGNORE INTO nodes_table (funcname, filename) VALUES (?, ?);";
+      "INSERT INTO nodes_table (funcname, filename) VALUES (?, ?) "
+      "ON CONFLICT(funcname) DO UPDATE SET "
+      "stale = 0, recently_changed = 1, filename = excluded.filename;";
 
   sqlite3_stmt *stmt;
   std::vector<std::string> params = {funcName, fileName};
@@ -222,4 +224,28 @@ bool CallGraph::shouldVisitNode(std::string funcName) {
   bool result = sqlite3_step(stmt) == SQLITE_ROW;
   sqlite3_finalize(stmt);
   return result;
+}
+
+void CallGraph::markNodesAsStale(std::string fileName) {
+  sqlite3_stmt *stmt;
+  std::string query = "UPDATE nodes_table SET stale = 1 WHERE filename = ? AND "
+                      "recently_changed = 0;";
+
+  std::vector<std::string> params = {fileName};
+  db->prepareStatement(stmt, query, params);
+  db->runStatement(stmt);
+
+  query = "DELETE FROM adjacency_matrix WHERE funcname1 IN "
+          "(SELECT funcname FROM nodes_table WHERE filename = ?);";
+
+  db->prepareStatement(stmt, query, params);
+  db->runStatement(stmt);
+}
+
+void CallGraph::deleteStaleNodes() {
+  sqlite3_stmt *stmt;
+  std::string query = "DELETE FROM nodes_table WHERE stale = 1";
+
+  db->prepareStatement(stmt, query);
+  db->runStatement(stmt);
 }

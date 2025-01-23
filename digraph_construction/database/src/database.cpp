@@ -56,7 +56,7 @@ void Database::createTables() {
       recursive BOOLEAN DEFAULT FALSE,
       indegree INTEGER DEFAULT 0,
       marked BOOLEAN DEFAULT FALSE,
-      recently_changed BOOLEAN DEFAULT FALSE,
+      recently_changed BOOLEAN DEFAULT TRUE,
       filename TEXT,
       stale BOOLEAN DEFAULT FALSE
     );
@@ -77,9 +77,10 @@ void Database::createTables() {
 
   createTable(R"(
     CREATE TABLE function_eraser_sets (
-      funcname TEXT PRIMARY KEY,
+      funcname TEXT,
       locks_changed BOOLEAN DEFAULT TRUE,
-      vars_changed BOOLEAN DEFAULT TRUE
+      vars_changed BOOLEAN DEFAULT TRUE,
+      FOREIGN KEY (funcname) REFERENCES nodes(funcname) ON DELETE CASCADE
     );
   )",
               "function_eraser_sets");
@@ -164,6 +165,7 @@ void Database::createTables() {
       funcname TEXT,
       testname TEXT,
       recently_changed BOOLEAN DEFAULT TRUE,
+      FOREIGN KEY (funcname) REFERENCES nodes(funcname) ON DELETE CASCADE,
       UNIQUE(funcname, testname)
     );
   )",
@@ -218,6 +220,7 @@ void Database::createTables() {
       funcname TEXT,
       varname TEXT,
       type TEXT CHECK(type IN ('read', 'write')),
+      FOREIGN KEY (funcname) REFERENCES nodes(funcname) ON DELETE CASCADE,
       UNIQUE(funcname, varname, type)
     );
   )",
@@ -229,6 +232,7 @@ void Database::createTables() {
       funcname TEXT,
       testname TEXT,
       recently_changed BOOLEAN DEFAULT TRUE,
+      FOREIGN KEY (funcname) REFERENCES nodes(funcname) ON DELETE CASCADE,
       UNIQUE(funcname, testname)
     );
   )",
@@ -250,6 +254,7 @@ void Database::createTables() {
       funcname TEXT,
       varname TEXT,
       type TEXT CHECK(type IN ('read', 'write')),
+      FOREIGN KEY (funcname) REFERENCES nodes(funcname) ON DELETE CASCADE
       UNIQUE(funcname, varname, type)
     );
   )",

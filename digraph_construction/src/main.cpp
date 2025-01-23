@@ -48,6 +48,7 @@ int main() {
 
   functionEraserSets->markFunctionEraserSetsAsOld();
   functionVariableLocksets->markFunctionVariableLocksetsAsOld();
+  callGraph->deleteStaleNodes();
 
   // staticEraser->testFunction(funcCfgs, "main");
   std::set<std::string> dataRaces =
