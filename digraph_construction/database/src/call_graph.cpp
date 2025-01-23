@@ -2,12 +2,12 @@
 
 CallGraph::CallGraph(Database *db) : db(db){};
 
-void CallGraph::addNode(std::string funcName) {
+void CallGraph::addNode(std::string funcName, std::string fileName) {
   std::string query =
-      "INSERT OR IGNORE INTO nodes_table (funcname) VALUES (?);";
+      "INSERT OR IGNORE INTO nodes_table (funcname, filename) VALUES (?, ?);";
 
   sqlite3_stmt *stmt;
-  std::vector<std::string> params = {funcName};
+  std::vector<std::string> params = {funcName, fileName};
   db->prepareStatement(stmt, query, params);
   db->runStatement(stmt);
 }

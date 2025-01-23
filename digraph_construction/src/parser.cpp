@@ -1,77 +1,11 @@
-#include "break_node.h"
-#include "call_graph.h"
-#include "construction_environment.h"
-#include "continue_node.h"
-#include "cumulative_locksets.h"
-#include "database.h"
-#include "delta_lockset.h"
-#include "endif_node.h"
-#include "endwhile_node.h"
-#include "function_call_node.h"
-#include "function_cumulative_locksets.h"
-#include "function_variable_locksets.h"
-#include "graph_visualizer.h"
-#include "if_node.h"
-#include "lock_node.h"
-#include "read_node.h"
-#include "return_node.h"
-#include "start_node.h"
-#include "startwhile_node.h"
-#include "thread_create_node.h"
-#include "thread_join_node.h"
-#include "unlock_node.h"
-#include "variable_locksets.h"
-#include "write_node.h"
-#include <clang-c/Index.h>
-#include <iostream>
-#include <unordered_map>
-#include <vector>
-using namespace std;
+#include "parser.h"
 
-struct VariableInfo {
-  int scopeDepth; // Depth of the scope (0 for global, etc.)
-  int scopeNum;
-  bool isStatic; // True if the variable is static, false otherwise
-};
-
-enum BranchType {
-  BRANCH_NONE,
-  BRANCH_IF,
-  BRANCH_ELSE_IF,
-  BRANCH_ELSE,
-  BRANCH_STARTWHILE,
-  BRANCH_WHILE,
-  BRANCH_DO_WHILE_START,
-  BRANCH_DO_WHILE_COND,
-  BRANCH_FOR_START,
-  BRANCH_FOR_ITERATOR,
-  BRANCH_FOR
-};
-
-enum LhsType { LHS_NONE, LHS_WRITE, LHS_READ_AND_WRITE };
-
-static unordered_map<string, StartNode *> funcCfgs = {};
-static unordered_map<string, bool> funcMap = {};
-static vector<string> functions = {};
-static set<string> functionDeclarations = {};
-static vector<unordered_map<string, VariableInfo>> scopeStack = {};
-static vector<unsigned int> scopeNums = {0};
-static int inFunc = 0;
-static int scopeDepth = 0;
-static bool ignoreNextCompound = false;
-static string funcName = "";
-static StartNode *startNode = nullptr;
-static ConstructionEnvironment *environment;
-static CallGraph *callGraph;
-
-// Utility to convert CXString to ostream easily
-ostream &operator<<(ostream &stream, const CXString &str) {
-  stream << clang_getCString(str);
-  clang_disposeString(str);
-  return stream;
+Parser::Parser(CallGraph *callGraphPtr) {
+  callGraph = callGraphPtr;
+  environment = new ConstructionEnvironment();
 }
 
-string getCursorFilename(CXCursor cursor) {
+std::string getCursorFilename(CXCursor cursor) {
   CXSourceLocation location = clang_getCursorLocation(cursor);
 
   CXFile file;
@@ -83,7 +17,7 @@ string getCursorFilename(CXCursor cursor) {
   }
 
   CXString filename = clang_getFileName(file);
-  string result = clang_getCString(filename);
+  std::string result = clang_getCString(filename);
   clang_disposeString(filename);
 
   return result;
@@ -103,7 +37,7 @@ LhsType assignmentOperatorType(CXCursor parent) {
 
   for (unsigned int i = 0; i < numTokens; ++i) {
     CXString tokenSpelling = clang_getTokenSpelling(tu, tokens[i]);
-    string token = clang_getCString(tokenSpelling);
+    std::string token = clang_getCString(tokenSpelling);
 
     if (parentKind == CXCursor_BinaryOperator && token == "=") {
       result = LHS_WRITE;
@@ -122,7 +56,7 @@ LhsType assignmentOperatorType(CXCursor parent) {
   return result;
 }
 
-VariableInfo findVariableInfo(string varName) {
+VariableInfo findVariableInfo(std::string varName) {
   for (int i = scopeDepth; i >= 0; i--) {
     auto t = scopeStack[i].find(varName);
     if (t != scopeStack[i].end()) {
@@ -141,21 +75,21 @@ bool isSharedVar(struct VariableInfo variableInfo) {
   return variableInfo.isStatic || variableInfo.scopeDepth == 0;
 }
 
-bool isSharedVar(string varName) {
+bool isSharedVar(std::string varName) {
   return isSharedVar(findVariableInfo(varName));
 }
 
-string getVariableName(string varName, CXCursor cursor,
-                       struct VariableInfo variableInfo) {
+std::string getVariableName(std::string varName, CXCursor cursor,
+                            struct VariableInfo variableInfo) {
   if (variableInfo.isStatic || variableInfo.scopeDepth > 0) {
-    string fileName = getCursorFilename(cursor);
-    varName = fileName + " " + to_string(variableInfo.scopeDepth) + " " +
-              to_string(variableInfo.scopeNum) + " " + varName;
+    std::string fileName = getCursorFilename(cursor);
+    varName = fileName + " " + std::to_string(variableInfo.scopeDepth) + " " +
+              std::to_string(variableInfo.scopeNum) + " " + varName;
   }
   return varName;
 }
 
-string getVariableName(string varName, CXCursor cursor) {
+std::string getVariableName(std::string varName, CXCursor cursor) {
   return getVariableName(varName, cursor, findVariableInfo(varName));
 }
 
@@ -175,7 +109,7 @@ CXCursor getFirstChild(CXCursor cursor) {
   return firstChild;
 }
 
-string getNthArg(CXCursor cursor, int targetArg, bool isPtr = false) {
+std::string getNthArg(CXCursor cursor, int targetArg, bool isPtr = false) {
   struct ArgClientData {
     int targetArg;
     bool isPtr;
@@ -215,7 +149,7 @@ string getNthArg(CXCursor cursor, int targetArg, bool isPtr = false) {
     }
     if (clang_getCursorKind(argCursor) == CXCursor_DeclRefExpr) {
       CXString argSpelling = clang_getCursorSpelling(argCursor);
-      string result = clang_getCString(argSpelling);
+      std::string result = clang_getCString(argSpelling);
       clang_disposeString(argSpelling);
       return result;
     }
@@ -223,26 +157,26 @@ string getNthArg(CXCursor cursor, int targetArg, bool isPtr = false) {
   return "";
 }
 
-string getFuncName(CXCursor cursor, string funcName) {
+std::string getFuncName(CXCursor cursor, std::string funcName) {
   auto func = funcMap.find(funcName);
   if (func != funcMap.end() && func->second) {
-    string fileName = getCursorFilename(cursor);
+    std::string fileName = getCursorFilename(cursor);
     funcName = fileName + " " + funcName;
   }
   return funcName;
 }
 
-void handleFunctionCall(CXCursor cursor, vector<GraphNode *> *nodesToAdd) {
-  string caller = funcName;
-  string funcName = clang_getCString(clang_getCursorSpelling(cursor));
+void handleFunctionCall(CXCursor cursor, std::vector<GraphNode *> *nodesToAdd) {
+  std::string caller = funcName;
+  std::string funcName = clang_getCString(clang_getCursorSpelling(cursor));
 
   if (funcName == "pthread_create") {
-    string called = getNthArg(cursor, 3);
+    std::string called = getNthArg(cursor, 3);
     if (called != "") {
-      string spelling = getNthArg(cursor, 1, true);
+      std::string spelling = getNthArg(cursor, 1, true);
       VariableInfo variableInfo = findVariableInfo(spelling);
-      string varName = getVariableName(spelling, cursor, variableInfo);
-      string funcName = getFuncName(cursor, called);
+      std::string varName = getVariableName(spelling, cursor, variableInfo);
+      std::string funcName = getFuncName(cursor, called);
       bool global = isSharedVar(variableInfo);
       environment->onAdd(new ThreadCreateNode(funcName, varName, global));
       if (global && varName != "") {
@@ -253,9 +187,9 @@ void handleFunctionCall(CXCursor cursor, vector<GraphNode *> *nodesToAdd) {
       callGraph->addEdge(caller, funcName, true);
     }
   } else if (funcName == "pthread_join") {
-    string spelling = getNthArg(cursor, 1);
+    std::string spelling = getNthArg(cursor, 1);
     VariableInfo variableInfo = findVariableInfo(spelling);
-    string varName = getVariableName(spelling, cursor, variableInfo);
+    std::string varName = getVariableName(spelling, cursor, variableInfo);
     bool global = isSharedVar(variableInfo);
     if (varName != "") {
       environment->onAdd(new ThreadJoinNode(varName, global));
@@ -265,10 +199,10 @@ void handleFunctionCall(CXCursor cursor, vector<GraphNode *> *nodesToAdd) {
     // treat as write. Okay for this algorithm
   } else if (funcName == "pthread_mutex_lock" ||
              funcName == "pthread_mutex_unlock") {
-    string spelling = getNthArg(cursor, 1, true);
+    std::string spelling = getNthArg(cursor, 1, true);
     VariableInfo variableInfo = findVariableInfo(spelling);
     if (isSharedVar(variableInfo)) {
-      string varName = getVariableName(spelling, cursor, variableInfo);
+      std::string varName = getVariableName(spelling, cursor, variableInfo);
       if (funcName == "pthread_mutex_lock") {
         environment->onAdd(new LockNode(varName));
       } else if (funcName == "pthread_mutex_unlock") {
@@ -283,9 +217,9 @@ void handleFunctionCall(CXCursor cursor, vector<GraphNode *> *nodesToAdd) {
 }
 
 void classifyVariable(CXCursor cursor, LhsType lhsType,
-                      vector<GraphNode *> *nodesToAdd) {
+                      std::vector<GraphNode *> *nodesToAdd) {
   CXString varNameObj = clang_getCursorSpelling(cursor);
-  string varName = clang_getCString(varNameObj);
+  std::string varName = clang_getCString(varNameObj);
   clang_disposeString(varNameObj);
 
   CXCursorKind cursorKind = clang_getCursorKind(cursor);
@@ -314,7 +248,7 @@ void classifyVariable(CXCursor cursor, LhsType lhsType,
     return;
   }
   CXString typeSpelling = clang_getTypeSpelling(cursorType);
-  if (string(clang_getCString(typeSpelling)) == "pthread_mutex_t") {
+  if (std::string(clang_getCString(typeSpelling)) == "pthread_mutex_t") {
     clang_disposeString(typeSpelling);
     return;
   }
@@ -323,9 +257,9 @@ void classifyVariable(CXCursor cursor, LhsType lhsType,
   bool global = variableInfo.scopeDepth == 0;
 
   if (variableInfo.isStatic) {
-    string fileName = getCursorFilename(cursor);
-    varName = fileName + " " + to_string(variableInfo.scopeDepth) + " " +
-              to_string(variableInfo.scopeNum) + " " + varName;
+    std::string fileName = getCursorFilename(cursor);
+    varName = fileName + " " + std::to_string(variableInfo.scopeDepth) + " " +
+              std::to_string(variableInfo.scopeNum) + " " + varName;
   }
 
   if (functionDeclarations.find(varName) == functionDeclarations.end()) {
@@ -377,15 +311,9 @@ BranchType getBranchType(CXCursor cursor, CXCursor parent,
   return BRANCH_NONE;
 }
 
-struct VisitorData {
-  unsigned int childIndex;
-  vector<GraphNode *> nodesToAdd;
-  LhsType lhsType;
-};
-
 void onNewScope() {
   scopeDepth += 1;
-  scopeStack.push_back(unordered_map<string, VariableInfo>());
+  scopeStack.push_back(std::unordered_map<std::string, VariableInfo>());
   if (scopeDepth >= scopeNums.size()) {
     scopeNums.push_back(0);
   } else {
@@ -407,7 +335,7 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
     bool isStatic = clang_Cursor_getStorageClass(cursor) == CX_SC_Static;
     funcMap.insert({funcName, isStatic});
     if (isStatic) {
-      string fileName = getCursorFilename(cursor);
+      std::string fileName = getCursorFilename(cursor);
       funcName = fileName + " " + funcName;
     }
     functionDeclarations.insert(funcName);
@@ -429,7 +357,7 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
   }
 
   VisitorData childData = {0, {}, nextLhsType};
-  vector<GraphNode *> nodesToAddAfterChildren = {};
+  std::vector<GraphNode *> nodesToAddAfterChildren = {};
   if (cursorKind == CXCursor_CallExpr) {
     handleFunctionCall(cursor, &childData.nodesToAdd);
   } else if (cursorKind == CXCursor_VarDecl ||
@@ -515,7 +443,7 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
       functions.push_back(funcName);
       funcCfgs.insert({funcName, startNode});
       // TODO - FLAG AS RECURSIVE
-      callGraph->addNode(funcName);
+      callGraph->addNode(funcName, getCursorFilename(cursor));
       startNode = nullptr;
     }
   }
@@ -525,16 +453,28 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
   return CXChildVisit_Continue;
 }
 
-int main() {
-  scopeStack.push_back(unordered_map<string, VariableInfo>());
+void Parser::parseFile(const char *fileName) {
+  funcMap = {};
+  functionDeclarations = {};
+  scopeStack.clear();
+  scopeNums = {0};
+  inFunc = 0;
+  scopeDepth = 0;
+  ignoreNextCompound = false;
+  funcName = "";
+  startNode = nullptr;
+
+  scopeStack.push_back(std::unordered_map<std::string, VariableInfo>());
+  scopeStack.push_back(std::unordered_map<std::string, VariableInfo>());
+  scopeStack.push_back(std::unordered_map<std::string, VariableInfo>());
+  scopeStack.push_back(std::unordered_map<std::string, VariableInfo>());
 
   CXIndex index = clang_createIndex(0, 0);
   CXTranslationUnit unit = clang_parseTranslationUnit(
-      index, "test_files/single_files/largest_check.c", nullptr, 0, nullptr, 0,
-      CXTranslationUnit_None);
+      index, fileName, nullptr, 0, nullptr, 0, CXTranslationUnit_None);
 
   if (unit == nullptr) {
-    cerr << "Unable to parse translation unit. Quitting." << endl;
+    std::cerr << "Unable to parse translation unit. Quitting." << std::endl;
     exit(-1);
   }
 
@@ -542,46 +482,14 @@ int main() {
 
   VisitorData initialData = {0, {}, LHS_NONE};
 
-  environment = new ConstructionEnvironment();
-  Database *db = new Database();
-  FunctionEraserSets *functionEraserSets = new FunctionEraserSets(db);
-  callGraph = new CallGraph(db);
   clang_visitChildren(cursor, visitor, &initialData);
-  GraphVisualizer *visualizer = new GraphVisualizer();
-  visualizer->visualizeGraph(funcCfgs[functions[1]]);
-
-  DeltaLockset *deltaLockset = new DeltaLockset(callGraph, functionEraserSets);
-  deltaLockset->updateLocksets(funcCfgs, functions);
-
-  FunctionVariableLocksets *functionVariableLocksets =
-      new FunctionVariableLocksets(db);
-
-  FunctionCumulativeLocksets *functionCumulativeLocksets =
-      new FunctionCumulativeLocksets(db, functionVariableLocksets);
-
-  VariableLocksets *variableLocksets =
-      new VariableLocksets(callGraph, functionVariableLocksets);
-
-  CumulativeLocksets *cumulativeLocksets =
-      new CumulativeLocksets(callGraph, functionCumulativeLocksets);
-
-  // TODO - INCLUDE PARENTS OF CHANGED DELTA LOCKSETS HERE!!!
-  variableLocksets->updateLocksets(funcCfgs, functions);
-  // TODO - SELECT WHERE function_variable_locksets.recently_changed = 1
-  cumulativeLocksets->updateLocksets(funcCfgs, functions);
-
-  functionEraserSets->markFunctionEraserSetsAsOld();
-  functionVariableLocksets->markFunctionVariableLocksetsAsOld();
-
-  // staticEraser->testFunction(funcCfgs, "main");
-  std::set<std::string> dataRaces =
-      functionCumulativeLocksets->detectDataRaces();
-
-  std::cout << "Variables with data races:" << std::endl;
-  for (const string &dataRace : dataRaces) {
-    cout << dataRace << endl;
-  }
 
   clang_disposeTranslationUnit(unit);
   clang_disposeIndex(index);
+}
+
+std::vector<std::string> Parser::getFunctions() { return functions; }
+
+std::unordered_map<std::string, StartNode *> Parser::getFuncCfgs() {
+  return funcCfgs;
 }

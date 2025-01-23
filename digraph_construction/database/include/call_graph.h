@@ -11,7 +11,7 @@ class CallGraph {
 public:
   explicit CallGraph(Database *db);
   virtual ~CallGraph() = default;
-  void addNode(std::string funcName);
+  void addNode(std::string funcName, std::string fileName);
   void addEdge(std::string caller, std::string callee, bool onThread);
   std::vector<std::string>
   deltaLocksetOrdering(std::vector<std::string> functions);

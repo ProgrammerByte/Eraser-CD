@@ -56,7 +56,9 @@ void Database::createTables() {
       recursive BOOLEAN DEFAULT FALSE,
       indegree INTEGER DEFAULT 0,
       marked BOOLEAN DEFAULT FALSE,
-      recently_changed BOOLEAN DEFAULT FALSE
+      recently_changed BOOLEAN DEFAULT FALSE,
+      filename TEXT,
+      stale BOOLEAN DEFAULT FALSE
     );
   )",
               "nodes_table");

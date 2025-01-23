@@ -4,6 +4,13 @@ StartNode *ConstructionEnvironment::startNewTree(std::string funcName) {
   currNode = new StartNode(funcName);
   currNode->id = 1;
   currId = 1;
+  ifStack = {};
+  endifListStack = {};
+  whileStack = {};
+  startwhileStack = {};
+  breakListStack = {};
+  continueListStack = {};
+  scopeStack = {};
   return (StartNode *)currNode;
 };
 
