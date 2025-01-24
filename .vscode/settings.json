@@ -54,7 +54,8 @@
         "thread": "cpp",
         "set": "cpp",
         "unordered_set": "cpp",
-        "pthread.h": "c"
+        "pthread.h": "c",
+        "cinttypes": "cpp"
     },
     "cSpell.words": [
         "STARTWHILE"
