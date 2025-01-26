@@ -24,7 +24,7 @@
 
 class VariableLocksets {
 public:
-  explicit VariableLocksets(CallGraph *callGraph,
+  explicit VariableLocksets(CallGraph *callGraph, Parser *parser,
                             FunctionVariableLocksets *functionVariableLocksets);
   virtual ~VariableLocksets() = default;
 
@@ -32,6 +32,7 @@ public:
 
 private:
   CallGraph *callGraph;
+  Parser *parser;
   FunctionVariableLocksets *functionVariableLocksets;
 
   std::priority_queue<GraphNode *, std::vector<GraphNode *>, CompareGraphNode>

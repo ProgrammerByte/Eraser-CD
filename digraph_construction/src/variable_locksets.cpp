@@ -2,10 +2,10 @@
 #include "set_operations.h"
 
 VariableLocksets::VariableLocksets(
-    CallGraph *callGraph, FunctionVariableLocksets *functionVariableLocksets) {
-  this->callGraph = callGraph;
-  this->functionVariableLocksets = functionVariableLocksets;
-}
+    CallGraph *callGraph, Parser *parser,
+    FunctionVariableLocksets *functionVariableLocksets)
+    : callGraph(callGraph), parser(parser),
+      functionVariableLocksets(functionVariableLocksets) {}
 
 bool VariableLocksets::variableRead(std::string varName,
                                     std::set<std::string> &locks) {
@@ -194,6 +194,10 @@ void VariableLocksets::updateLocksets(
       currTest = pair.first;
       functionVariableLocksets->startNewTest(currTest);
       std::set<std::string> startLocks = pair.second;
+      if (funcCfgs.find(funcName) == funcCfgs.end()) {
+        std::string fileName = callGraph->getFilenameFromFuncname(funcName);
+        parser->parseFile(fileName.c_str());
+      }
       handleFunction(funcCfgs[funcName], startLocks);
 
       std::unordered_map<std::string, std::set<std::string>> variableLocks =

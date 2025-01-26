@@ -49,7 +49,7 @@ int main() {
       new FunctionCumulativeLocksets(db, functionVariableLocksets);
 
   VariableLocksets *variableLocksets =
-      new VariableLocksets(callGraph, functionVariableLocksets);
+      new VariableLocksets(callGraph, parser, functionVariableLocksets);
 
   CumulativeLocksets *cumulativeLocksets =
       new CumulativeLocksets(callGraph, functionCumulativeLocksets);
