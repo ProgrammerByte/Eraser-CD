@@ -68,8 +68,8 @@ void Database::createTables() {
       funcname1 TEXT,
       funcname2 TEXT,
       on_thread BOOLEAN DEFAULT FALSE,
-      FOREIGN KEY (funcname1) REFERENCES nodes(funcname) ON DELETE CASCADE,
-      FOREIGN KEY (funcname2) REFERENCES nodes(funcname) ON DELETE CASCADE,
+      FOREIGN KEY (funcname1) REFERENCES nodes_table(funcname) ON DELETE CASCADE,
+      FOREIGN KEY (funcname2) REFERENCES nodes_table(funcname) ON DELETE CASCADE,
       UNIQUE(funcname1, funcname2, on_thread)
     );
   )",
@@ -77,10 +77,10 @@ void Database::createTables() {
 
   createTable(R"(
     CREATE TABLE function_eraser_sets (
-      funcname TEXT,
+      funcname TEXT PRIMARY KEY,
       locks_changed BOOLEAN DEFAULT TRUE,
       vars_changed BOOLEAN DEFAULT TRUE,
-      FOREIGN KEY (funcname) REFERENCES nodes(funcname) ON DELETE CASCADE
+      FOREIGN KEY (funcname) REFERENCES nodes_table(funcname) ON DELETE CASCADE
     );
   )",
               "function_eraser_sets");
@@ -100,7 +100,6 @@ void Database::createTables() {
     CREATE TABLE function_recursive_unlocks (
       funcname TEXT,
       varname TEXT,
-      FOREIGN KEY (funcname) REFERENCES function_eraser_sets(funcname) ON DELETE CASCADE,
       UNIQUE(funcname, varname)
     );
   )",
@@ -166,7 +165,7 @@ void Database::createTables() {
       testname TEXT,
       recently_changed BOOLEAN DEFAULT TRUE,
       caller_locks_changed BOOLEAN DEFAULT FALSE,
-      FOREIGN KEY (funcname) REFERENCES nodes(funcname) ON DELETE CASCADE,
+      FOREIGN KEY (funcname) REFERENCES nodes_table(funcname) ON DELETE CASCADE,
       UNIQUE(funcname, testname)
     );
   )",
@@ -189,7 +188,6 @@ void Database::createTables() {
         caller TEXT,
         FOREIGN KEY (function_variable_locksets_id) REFERENCES
         function_variable_locksets(id) ON DELETE CASCADE,
-        FOREIGN KEY (caller) REFERENCES adjacency_matrix(funcname1) ON DELETE CASCADE,
         UNIQUE(function_variable_locksets_id, caller)
      );
    )",
@@ -222,7 +220,7 @@ void Database::createTables() {
       funcname TEXT,
       varname TEXT,
       type TEXT CHECK(type IN ('read', 'write')),
-      FOREIGN KEY (funcname) REFERENCES nodes(funcname) ON DELETE CASCADE,
+      FOREIGN KEY (funcname) REFERENCES nodes_table(funcname) ON DELETE CASCADE,
       UNIQUE(funcname, varname, type)
     );
   )",
@@ -234,7 +232,7 @@ void Database::createTables() {
       funcname TEXT,
       testname TEXT,
       recently_changed BOOLEAN DEFAULT TRUE,
-      FOREIGN KEY (funcname) REFERENCES nodes(funcname) ON DELETE CASCADE,
+      FOREIGN KEY (funcname) REFERENCES nodes_table(funcname) ON DELETE CASCADE,
       UNIQUE(funcname, testname)
     );
   )",
@@ -256,7 +254,7 @@ void Database::createTables() {
       funcname TEXT,
       varname TEXT,
       type TEXT CHECK(type IN ('read', 'write')),
-      FOREIGN KEY (funcname) REFERENCES nodes(funcname) ON DELETE CASCADE
+      FOREIGN KEY (funcname) REFERENCES nodes_table(funcname) ON DELETE CASCADE
       UNIQUE(funcname, varname, type)
     );
   )",
@@ -276,6 +274,8 @@ Database::Database(bool initialCommit) {
   if (initialCommit) {
     createTables();
   }
+
+  sqlite3_exec(db, "PRAGMA foreign_keys = ON;", nullptr, nullptr, nullptr);
 }
 
 std::string Database::createTupleList(std::vector<std::string> &nodes) {

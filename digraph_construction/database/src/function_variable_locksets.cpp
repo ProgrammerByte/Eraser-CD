@@ -94,11 +94,22 @@ FunctionInputs FunctionVariableLocksets::updateAndCheckCombinedInputs() {
   }
 
   sqlite3_stmt *stmt;
+  std::string query =
+      "DELETE FROM function_variable_locksets WHERE "
+      "funcname = ? AND testname NOT IN ("
+      "  SELECT DISTINCT fvl1.testname FROM function_variable_locksets AS fvl1 "
+      "  JOIN function_variable_locksets_callers AS fvlc ON fvl1.funcname = "
+      "  fvlc.caller JOIN function_variable_locksets AS fvl2 ON "
+      "  fvlc.function_variable_locksets_id = fvl2.id WHERE fvl2.funcname = ?"
+      ")";
+  std::vector<std::string> params = {currFunc, currFunc};
+  db->prepareStatement(stmt, query, params);
+
   // TODO - MAYBE recently_changed FOR FUNCTION CHANGED AND A SEPARATE
   // inputs_changed?
-  std::string query = "SELECT id, testname, recently_changed FROM "
-                      "function_variable_locksets WHERE funcname = ?;";
-  std::vector<std::string> params = {currFunc};
+  query = "SELECT id, testname, recently_changed FROM "
+          "function_variable_locksets WHERE funcname = ?;";
+  params = {currFunc};
   db->prepareStatement(stmt, query, params);
   std::vector<std::string> ids = {};
   std::vector<std::string> testnames = {};
