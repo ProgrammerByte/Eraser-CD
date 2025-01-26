@@ -345,6 +345,7 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
   } else if (cursorKind == CXCursor_CompoundStmt) {
     if (ignoreNextCompound) {
       startNode = environment->startNewTree(funcName);
+      callGraph->addNode(funcName, getCursorFilename(cursor));
       ignoreNextCompound = false;
     } else {
       onNewScope();
@@ -445,8 +446,6 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
       environment->onAdd(new ReturnNode());
       functions.push_back(funcName);
       funcCfgs.insert({funcName, startNode});
-      // TODO - FLAG AS RECURSIVE
-      callGraph->addNode(funcName, getCursorFilename(cursor));
       startNode = nullptr;
     }
   }
