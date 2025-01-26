@@ -165,6 +165,7 @@ void Database::createTables() {
       funcname TEXT,
       testname TEXT,
       recently_changed BOOLEAN DEFAULT TRUE,
+      caller_locks_changed BOOLEAN DEFAULT FALSE,
       FOREIGN KEY (funcname) REFERENCES nodes(funcname) ON DELETE CASCADE,
       UNIQUE(funcname, testname)
     );
@@ -188,6 +189,7 @@ void Database::createTables() {
         caller TEXT,
         FOREIGN KEY (function_variable_locksets_id) REFERENCES
         function_variable_locksets(id) ON DELETE CASCADE,
+        FOREIGN KEY (caller) REFERENCES adjacency_matrix(funcname1) ON DELETE CASCADE,
         UNIQUE(function_variable_locksets_id, caller)
      );
    )",

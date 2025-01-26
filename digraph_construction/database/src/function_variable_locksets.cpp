@@ -94,6 +94,8 @@ FunctionInputs FunctionVariableLocksets::updateAndCheckCombinedInputs() {
   }
 
   sqlite3_stmt *stmt;
+  // TODO - MAYBE recently_changed FOR FUNCTION CHANGED AND A SEPARATE
+  // inputs_changed?
   std::string query = "SELECT id, testname, recently_changed FROM "
                       "function_variable_locksets WHERE funcname = ?;";
   std::vector<std::string> params = {currFunc};
@@ -210,8 +212,9 @@ FunctionInputs FunctionVariableLocksets::updateAndCheckCombinedInputs() {
 
 bool FunctionVariableLocksets::shouldVisitNode(std::string funcName) {
   sqlite3_stmt *stmt;
-  std::string query = "SELECT 1 FROM function_variable_locksets WHERE funcname "
-                      "= ? AND recently_changed = 0;";
+  std::string query =
+      "SELECT 1 FROM function_variable_locksets WHERE funcname "
+      "= ? AND (recently_changed = 0 AND caller_locks_changed = 0);";
 
   std::vector<std::string> params = {funcName};
   db->prepareStatement(stmt, query, params);
@@ -239,8 +242,7 @@ void FunctionVariableLocksets::addFuncCallLocksets(
   sqlite3_finalize(stmt);
 
   for (const std::string &id : ids) {
-    query = "DELETE FROM function_variable_locksets_callers WHERE "
-            "function_variable_locksets_callers_id = ?";
+    query = "DELETE FROM function_variable_locksets_callers WHERE id = ?";
     params = {id};
     db->prepareStatement(stmt, query, params);
     db->runStatement(stmt);
@@ -251,6 +253,12 @@ void FunctionVariableLocksets::addFuncCallLocksets(
     std::set<std::string> locks = pair.second;
 
     std::string funcId = getId(funcName, currTest);
+    query = "UPDATE function_variable_locksets SET caller_locks_changed = 1 "
+            "WHERE id = ?;";
+    params = {funcId};
+    db->prepareStatement(stmt, query, params);
+    db->runStatement(stmt);
+
     query = "INSERT INTO function_variable_locksets_callers "
             "(function_variable_locksets_id, caller) VALUES (?, ?)";
     params = {funcId, currFunc};
@@ -347,8 +355,8 @@ VariableLocks FunctionVariableLocksets::getVariableLocks(std::string func,
 
 void FunctionVariableLocksets::markFunctionVariableLocksetsAsOld() {
   sqlite3_stmt *stmt;
-  std::string query =
-      "UPDATE function_variable_locksets SET recently_changed = 0;";
+  std::string query = "UPDATE function_variable_locksets SET recently_changed "
+                      "= 0, caller_locks_changed = 0;";
   db->prepareStatement(stmt, query);
   db->runStatement(stmt);
 

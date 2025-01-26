@@ -240,6 +240,27 @@ void CallGraph::markNodesAsStale(std::string fileName) {
 
   db->prepareStatement(stmt, query, params);
   db->runStatement(stmt);
+
+  query = "DELETE FROM function_variable_cumulative_locksets_outputs WHERE "
+          "function_variable_cumulative_locksets_id IN "
+          "(SELECT id FROM function_variable_locksets WHERE funcname IN "
+          "(SELECT funcname FROM nodes_table WHERE filename = ?));";
+
+  db->prepareStatement(stmt, query, params);
+  db->runStatement(stmt);
+
+  query = "DELETE FROM function_variable_cumulative_accesses WHERE funcname IN "
+          "(SELECT funcname FROM nodes_table WHERE filename = ?);";
+
+  db->prepareStatement(stmt, query, params);
+  db->runStatement(stmt);
+
+  query = "UPDATE function_variable_locksets SET recently_changed = 1 WHERE "
+          "funcname IN "
+          "(SELECT funcname FROM nodes_table WHERE filename = ?);";
+
+  db->prepareStatement(stmt, query, params);
+  db->runStatement(stmt);
 }
 
 void CallGraph::deleteStaleNodes() {
