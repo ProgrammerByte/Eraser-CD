@@ -15,17 +15,25 @@
 #include <vector>
 
 int main() {
-  Database *db = new Database();
+  bool initialCommit = true;
+  Database *db = new Database(initialCommit);
   FunctionEraserSets *functionEraserSets = new FunctionEraserSets(db);
   CallGraph *callGraph = new CallGraph(db);
   DiffAnalysis *diffAnalysis = new DiffAnalysis();
   Parser *parser = new Parser(callGraph);
 
   std::string repoPath = "~/dissertation/Eraser-CD";
-  std::string commitHash1 = "300e894461d8a7cf21a4d2e4b49281e4f940a472";
-  std::string commitHash2 = "4127b6c626f3fe9cb311b59c3b14ede9222c420b";
-  std::vector<std::string> changedFiles =
-      diffAnalysis->getChangedFiles(repoPath, commitHash1, commitHash2);
+  std::vector<std::string> changedFiles;
+  if (initialCommit) {
+    changedFiles = diffAnalysis->getAllFiles(repoPath);
+    changedFiles = {"test_files/single_files/largest_check.c"};
+  } else {
+    std::string commitHash1 = "300e894461d8a7cf21a4d2e4b49281e4f940a472";
+    std::string commitHash2 = "4127b6c626f3fe9cb311b59c3b14ede9222c420b";
+    changedFiles =
+        diffAnalysis->getChangedFiles(repoPath, commitHash1, commitHash2);
+  }
+
   std::cout << "Parsing changed files:" << std::endl;
   for (const auto &file : changedFiles) {
     std::cout << file << std::endl;

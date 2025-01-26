@@ -16,6 +16,8 @@ public:
                                            const std::string &commitHash1,
                                            const std::string &commitHash2);
 
+  std::vector<std::string> getAllFiles(const std::string &repoPath);
+
 private:
   std::string executeCommand(const std::string &command);
 };

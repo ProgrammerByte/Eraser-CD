@@ -261,15 +261,19 @@ void Database::createTables() {
               "function_variable_cumulative_accesses");
 }
 
-Database::Database() {
-  deleteDatabase();
+Database::Database(bool initialCommit) {
+  if (initialCommit) {
+    deleteDatabase();
+  }
 
   if (sqlite3_open(dbName.c_str(), &db) != SQLITE_OK) {
     std::cerr << "Error opening database: " << sqlite3_errmsg(db) << std::endl;
     return;
   }
 
-  createTables();
+  if (initialCommit) {
+    createTables();
+  }
 }
 
 std::string Database::createTupleList(std::vector<std::string> &nodes) {

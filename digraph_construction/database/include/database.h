@@ -8,7 +8,7 @@
 
 class Database {
 public:
-  explicit Database();
+  explicit Database(bool initialCommit);
   virtual ~Database();
 
   void prepareStatement(sqlite3_stmt *&stmt, std::string query,
