@@ -10,6 +10,7 @@
 #include "function_variable_locksets.h"
 #include "if_node.h"
 #include "lock_node.h"
+#include "parser.h"
 #include "read_node.h"
 #include "return_node.h"
 #include "set_operations.h"
@@ -27,8 +28,7 @@ public:
                             FunctionVariableLocksets *functionVariableLocksets);
   virtual ~VariableLocksets() = default;
 
-  void updateLocksets(std::unordered_map<std::string, StartNode *> funcCfgs,
-                      std::vector<std::string> changedFunctions);
+  void updateLocksets(std::vector<std::string> changedFunctions);
 
 private:
   CallGraph *callGraph;
@@ -39,7 +39,6 @@ private:
 
   std::vector<GraphNode *> backwardQueue;
 
-  std::unordered_map<std::string, StartNode *> funcCfgs;
   std::string currFunc;
   std::string currTest;
   VariableLocks variableLocksets;

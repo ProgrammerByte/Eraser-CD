@@ -13,12 +13,9 @@ public:
       FunctionCumulativeLocksets *functionCumulativeLocksets);
   virtual ~CumulativeLocksets() = default;
 
-  void updateLocksets(std::unordered_map<std::string, StartNode *> funcCfgs,
-                      std::vector<std::string> changedFunctions);
+  void updateLocksets(std::vector<std::string> changedFunctions);
 
 private:
   CallGraph *callGraph;
   FunctionCumulativeLocksets *functionCumulativeLocksets;
-
-  std::unordered_map<std::string, StartNode *> funcCfgs;
 };

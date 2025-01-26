@@ -20,6 +20,7 @@ public:
   bool shouldVisitNode(std::string funcName);
   void markNodesAsStale(std::string fileName);
   void deleteStaleNodes();
+  std::string getFilenameFromFuncname(std::string funcName);
 
 private:
   Database *db;

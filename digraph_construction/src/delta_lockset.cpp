@@ -1,11 +1,10 @@
 #include "delta_lockset.h"
 #include "set_operations.h"
 
-DeltaLockset::DeltaLockset(CallGraph *callGraph,
-                           FunctionEraserSets *functionEraserSets) {
-  this->callGraph = callGraph;
-  this->functionEraserSets = functionEraserSets;
-}
+DeltaLockset::DeltaLockset(CallGraph *callGraph, Parser *parser,
+                           FunctionEraserSets *functionEraserSets)
+    : callGraph(callGraph), parser(parser),
+      functionEraserSets(functionEraserSets) {}
 
 void addVarToSM(std::string varName, EraserSets &sets) {
   sets.sharedModified.insert(varName);
@@ -354,11 +353,7 @@ void DeltaLockset::handleFunction(GraphNode *startNode) {
 
 // TODO - startNode unlocks should be used by static eraser to remove from
 // current lockset before calling function
-void DeltaLockset::updateLocksets(
-    std::unordered_map<std::string, StartNode *> funcCfgs,
-    std::vector<std::string> changedFunctions) {
-  this->funcCfgs = funcCfgs;
-
+void DeltaLockset::updateLocksets(std::vector<std::string> changedFunctions) {
   std::vector<std::string> ordering =
       callGraph->deltaLocksetOrdering(changedFunctions);
 
@@ -367,6 +362,10 @@ void DeltaLockset::updateLocksets(
       continue;
     }
     currFunc = funcName;
+    if (funcCfgs.find(funcName) == funcCfgs.end()) {
+      std::string fileName = callGraph->getFilenameFromFuncname(funcName);
+      parser->parseFile(fileName.c_str());
+    }
     handleFunction(funcCfgs[funcName]);
 
     if (false) {

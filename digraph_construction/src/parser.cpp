@@ -1,6 +1,9 @@
 #include "parser.h"
 
+std::unordered_map<std::string, StartNode *> funcCfgs;
+
 Parser::Parser(CallGraph *callGraphPtr) {
+  funcCfgs = {};
   callGraph = callGraphPtr;
   environment = new ConstructionEnvironment();
 }
@@ -487,7 +490,3 @@ void Parser::parseFile(const char *fileName) {
 }
 
 std::vector<std::string> Parser::getFunctions() { return functions; }
-
-std::unordered_map<std::string, StartNode *> Parser::getFuncCfgs() {
-  return funcCfgs;
-}

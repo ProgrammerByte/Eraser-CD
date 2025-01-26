@@ -56,7 +56,7 @@ inline std::ostream &operator<<(std::ostream &stream, const CXString &str) {
   return stream;
 }
 
-static std::unordered_map<std::string, StartNode *> funcCfgs = {};
+extern std::unordered_map<std::string, StartNode *> funcCfgs;
 static std::unordered_map<std::string, bool> funcMap = {};
 static std::vector<std::string> functions = {};
 static std::set<std::string> functionDeclarations = {};
@@ -78,5 +78,4 @@ public:
 
   void parseFile(const char *fileName);
   std::vector<std::string> getFunctions();
-  std::unordered_map<std::string, StartNode *> getFuncCfgs();
 };

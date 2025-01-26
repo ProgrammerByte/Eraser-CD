@@ -8,7 +8,6 @@ CumulativeLocksets::CumulativeLocksets(
 }
 
 void CumulativeLocksets::updateLocksets(
-    std::unordered_map<std::string, StartNode *> funcCfgs,
     std::vector<std::string> changedFunctions) {
   std::vector<std::string> ordering =
       callGraph->deltaLocksetOrdering(changedFunctions);

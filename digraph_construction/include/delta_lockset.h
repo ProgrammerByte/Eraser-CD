@@ -10,6 +10,7 @@
 #include "graph_node.h"
 #include "if_node.h"
 #include "lock_node.h"
+#include "parser.h"
 #include "read_node.h"
 #include "return_node.h"
 #include "set_operations.h"
@@ -22,16 +23,16 @@
 
 class DeltaLockset {
 public:
-  explicit DeltaLockset(CallGraph *callGraph,
+  explicit DeltaLockset(CallGraph *callGraph, Parser *parser,
                         FunctionEraserSets *functionEraserSets);
   virtual ~DeltaLockset() = default;
 
-  void updateLocksets(std::unordered_map<std::string, StartNode *> funcCfgs,
-                      std::vector<std::string> changedFunctions);
+  void updateLocksets(std::vector<std::string> changedFunctions);
 
 private:
   bool recursive;
   CallGraph *callGraph;
+  Parser *parser;
   FunctionEraserSets *functionEraserSets;
   std::set<std::string> functionDirectReads;
   std::set<std::string> functionDirectWrites;
@@ -41,7 +42,6 @@ private:
 
   std::vector<GraphNode *> backwardQueue;
 
-  std::unordered_map<std::string, StartNode *> funcCfgs;
   std::string currFunc;
   std::unordered_map<GraphNode *, EraserSets> nodeSets;
 

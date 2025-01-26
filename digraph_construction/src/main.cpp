@@ -34,13 +34,13 @@ int main() {
   std::cout << std::endl;
 
   std::vector<std::string> functions = parser->getFunctions();
-  std::unordered_map<std::string, StartNode *> funcCfgs = parser->getFuncCfgs();
 
   GraphVisualizer *visualizer = new GraphVisualizer();
   visualizer->visualizeGraph(funcCfgs[functions[1]]);
 
-  DeltaLockset *deltaLockset = new DeltaLockset(callGraph, functionEraserSets);
-  deltaLockset->updateLocksets(funcCfgs, functions);
+  DeltaLockset *deltaLockset =
+      new DeltaLockset(callGraph, parser, functionEraserSets);
+  deltaLockset->updateLocksets(functions);
 
   FunctionVariableLocksets *functionVariableLocksets =
       new FunctionVariableLocksets(db);
@@ -55,15 +55,15 @@ int main() {
       new CumulativeLocksets(callGraph, functionCumulativeLocksets);
 
   // TODO - INCLUDE PARENTS OF CHANGED DELTA LOCKSETS HERE!!!
-  variableLocksets->updateLocksets(funcCfgs, functions);
+  variableLocksets->updateLocksets(functions);
   // TODO - SELECT WHERE function_variable_locksets.recently_changed = 1
-  cumulativeLocksets->updateLocksets(funcCfgs, functions);
+  cumulativeLocksets->updateLocksets(functions);
 
   functionEraserSets->markFunctionEraserSetsAsOld();
   functionVariableLocksets->markFunctionVariableLocksetsAsOld();
   callGraph->deleteStaleNodes();
 
-  // staticEraser->testFunction(funcCfgs, "main");
+  // staticEraser->testFunction("main");
   std::set<std::string> dataRaces =
       functionCumulativeLocksets->detectDataRaces();
 

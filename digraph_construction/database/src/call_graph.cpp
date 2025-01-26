@@ -249,3 +249,17 @@ void CallGraph::deleteStaleNodes() {
   db->prepareStatement(stmt, query);
   db->runStatement(stmt);
 }
+
+std::string CallGraph::getFilenameFromFuncname(std::string funcName) {
+  sqlite3_stmt *stmt;
+  std::string query = "SELECT filename FROM nodes_table WHERE funcname = ?;";
+
+  std::vector<std::string> params = {funcName};
+  db->prepareStatement(stmt, query, params);
+  std::string result = "";
+  if (sqlite3_step(stmt) == SQLITE_ROW) {
+    result = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
+  }
+  sqlite3_finalize(stmt);
+  return result;
+}
