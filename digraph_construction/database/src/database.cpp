@@ -57,7 +57,7 @@ void Database::createTables() {
       indegree INTEGER DEFAULT 0,
       marked BOOLEAN DEFAULT FALSE,
       recently_changed BOOLEAN DEFAULT TRUE,
-      filename TEXT,
+      filename TEXT DEFAULT NULL,
       stale BOOLEAN DEFAULT FALSE
     );
   )",

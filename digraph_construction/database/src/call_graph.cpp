@@ -15,22 +15,28 @@ void CallGraph::addNode(std::string funcName, std::string fileName) {
 }
 
 void CallGraph::addEdge(std::string caller, std::string callee, bool onThread) {
-  if (caller != callee) {
-    std::string query = "INSERT OR IGNORE INTO adjacency_matrix (funcname1, "
-                        "funcname2, on_thread) "
-                        "VALUES (?, ?, ?);";
+  std::string query;
+  sqlite3_stmt *stmt;
+  std::vector<std::string> params;
 
-    sqlite3_stmt *stmt;
-    std::vector<std::string> params = {caller, callee,
-                                       db->createBoolean(onThread)};
+  if (caller != callee) {
+    query = "INSERT OR IGNORE INTO nodes_table (funcname, recently_changed) "
+            "VALUES (?, 0);";
+    params = {callee};
+    db->prepareStatement(stmt, query, params);
+    db->runStatement(stmt);
+
+    query = "INSERT OR IGNORE INTO adjacency_matrix (funcname1, "
+            "funcname2, on_thread) "
+            "VALUES (?, ?, ?);";
+
+    params = {caller, callee, db->createBoolean(onThread)};
     db->prepareStatement(stmt, query, params);
     db->runStatement(stmt);
   } else {
-    std::string query =
-        "UPDATE nodes_table SET recursive = 1 WHERE funcname = ?;";
+    query = "UPDATE nodes_table SET recursive = 1 WHERE funcname = ?;";
 
-    sqlite3_stmt *stmt;
-    std::vector<std::string> params = {caller};
+    params = {caller};
     db->prepareStatement(stmt, query, params);
     db->runStatement(stmt);
   }

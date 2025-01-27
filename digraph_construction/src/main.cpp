@@ -32,7 +32,7 @@ int main() {
                     "test_files/largest_check_multi_file/recur.h",
                     "test_files/largest_check_multi_file/globals.h",
                     "test_files/largest_check_multi_file/largest_check.c",
-                    "test_file/largest_check_multi_file/largest_check.h"};
+                    "test_files/largest_check_multi_file/largest_check.h"};
   } else {
     std::string commitHash1 = "300e894461d8a7cf21a4d2e4b49281e4f940a472";
     std::string commitHash2 = "4127b6c626f3fe9cb311b59c3b14ede9222c420b";
