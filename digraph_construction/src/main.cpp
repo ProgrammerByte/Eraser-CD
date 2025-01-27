@@ -15,7 +15,7 @@
 #include <vector>
 
 int main() {
-  bool initialCommit = true;
+  bool initialCommit = false;
   Database *db = new Database(initialCommit);
   FunctionEraserSets *functionEraserSets = new FunctionEraserSets(db);
   CallGraph *callGraph = new CallGraph(db);
@@ -38,11 +38,20 @@ int main() {
     std::string commitHash2 = "4127b6c626f3fe9cb311b59c3b14ede9222c420b";
     changedFiles =
         diffAnalysis->getChangedFiles(repoPath, commitHash1, commitHash2);
+
+    changedFiles = {"test_files/largest_check_multi_file/main.c",
+                    "test_files/largest_check_multi_file/recur.c",
+                    "test_files/largest_check_multi_file/recur.h",
+                    "test_files/largest_check_multi_file/globals.h",
+                    "test_files/largest_check_multi_file/largest_check.c",
+                    "test_files/largest_check_multi_file/largest_check.h"};
+    changedFiles = {"test_files/largest_check_multi_file/recur.c"};
   }
 
   std::cout << "Parsing changed files:" << std::endl;
   for (const auto &file : changedFiles) {
     std::cout << file << std::endl;
+    callGraph->markNodesAsStale(file);
     parser->parseFile(file.c_str());
   }
   std::cout << std::endl;
@@ -50,7 +59,7 @@ int main() {
   std::vector<std::string> functions = parser->getFunctions();
 
   GraphVisualizer *visualizer = new GraphVisualizer();
-  visualizer->visualizeGraph(funcCfgs[functions[1]]);
+  // visualizer->visualizeGraph(funcCfgs[functions[1]]);
 
   DeltaLockset *deltaLockset =
       new DeltaLockset(callGraph, parser, functionEraserSets);
