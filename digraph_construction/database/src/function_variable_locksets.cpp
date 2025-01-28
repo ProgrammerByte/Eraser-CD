@@ -305,15 +305,15 @@ void FunctionVariableLocksets::addVariableLocksets(
   std::string query;
   std::vector<std::string> params;
 
+  query = "DELETE FROM function_variable_locksets_outputs WHERE "
+          "function_variable_locksets_id = ?";
+  params = {currId};
+  db->prepareStatement(stmt, query, params);
+  db->runStatement(stmt);
+
   for (const auto &pair : variableLocksets) {
     std::string varName = pair.first;
     std::set<std::string> locks = pair.second;
-
-    query = "DELETE FROM function_variable_locksets_outputs WHERE "
-            "function_variable_locksets_id = ?";
-    params = {currId};
-    db->prepareStatement(stmt, query, params);
-    db->runStatement(stmt);
 
     query = "INSERT INTO function_variable_locksets_outputs "
             "(function_variable_locksets_id, varname, lock) VALUES (?, ?, ?);";
