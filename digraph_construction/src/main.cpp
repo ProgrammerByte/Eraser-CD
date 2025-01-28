@@ -46,6 +46,7 @@ int main() {
                     "test_files/largest_check_multi_file/largest_check.c",
                     "test_files/largest_check_multi_file/largest_check.h"};
     changedFiles = {"test_files/largest_check_multi_file/recur.c"};
+    changedFiles = {"test_files/largest_check_multi_file/largest_check.c"};
   }
 
   std::cout << "Parsing changed files:" << std::endl;
@@ -79,8 +80,7 @@ int main() {
 
   // TODO - INCLUDE PARENTS OF CHANGED DELTA LOCKSETS HERE!!!
   variableLocksets->updateLocksets(functions);
-  // TODO - SELECT WHERE function_variable_locksets.recently_changed = 1
-  cumulativeLocksets->updateLocksets(functions);
+  cumulativeLocksets->updateLocksets();
 
   functionEraserSets->markFunctionEraserSetsAsOld();
   functionVariableLocksets->markFunctionVariableLocksetsAsOld();

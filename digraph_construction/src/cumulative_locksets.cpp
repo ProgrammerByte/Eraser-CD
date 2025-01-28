@@ -7,10 +7,11 @@ CumulativeLocksets::CumulativeLocksets(
   this->functionCumulativeLocksets = functionCumulativeLocksets;
 }
 
-void CumulativeLocksets::updateLocksets(
-    std::vector<std::string> changedFunctions) {
+void CumulativeLocksets::updateLocksets() {
+  std::vector<std::string> functions =
+      functionCumulativeLocksets->getFunctionsForTesting();
   std::vector<std::string> ordering =
-      callGraph->deltaLocksetOrdering(changedFunctions);
+      callGraph->deltaLocksetOrdering(functions);
 
   for (const std::string &funcName : ordering) {
     if (!functionCumulativeLocksets->shouldVisitNode(funcName)) {

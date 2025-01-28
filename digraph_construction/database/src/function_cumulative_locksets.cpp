@@ -259,6 +259,21 @@ void FunctionCumulativeLocksets::updateFunctionCumulativeLocksets(
   }
 }
 
+std::vector<std::string> FunctionCumulativeLocksets::getFunctionsForTesting() {
+  sqlite3_stmt *stmt;
+  std::string query = "SELECT funcname FROM function_variable_locksets WHERE "
+                      "recently_changed = 1";
+
+  db->prepareStatement(stmt, query);
+  std::vector<std::string> functions = {};
+  while (sqlite3_step(stmt) == SQLITE_ROW) {
+    std::string funcName = std::string(
+        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0)));
+    functions.push_back(funcName);
+  }
+  return functions;
+}
+
 std::set<std::string> FunctionCumulativeLocksets::detectDataRaces() {
   std::string funcName = "main";
   std::string testName = "debug";

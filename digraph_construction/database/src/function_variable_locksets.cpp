@@ -130,11 +130,11 @@ FunctionInputs FunctionVariableLocksets::updateAndCheckCombinedInputs() {
     bool changed = recentlyChanged[i];
     std::set<std::string> oldCombinedLocks = {};
     if (changed) {
-      query = "DELETE FROM function_variable_locksets_combined_inputs WHERE "
-              "function_variable_locksets_id = ?;";
-      params = {id};
-      db->prepareStatement(stmt, query, params);
-      db->runStatement(stmt);
+      // query = "DELETE FROM function_variable_locksets_combined_inputs WHERE "
+      //         "function_variable_locksets_id = ?;";
+      // params = {id};
+      // db->prepareStatement(stmt, query, params);
+      // db->runStatement(stmt);
     } else {
       query =
           "SELECT lock FROM function_variable_locksets_combined_inputs WHERE "
@@ -255,8 +255,8 @@ void FunctionVariableLocksets::addFuncCallLocksets(
   for (const std::string &id : ids) {
     query = "DELETE FROM function_variable_locksets_callers WHERE id = ?";
     params = {id};
-    db->prepareStatement(stmt, query, params);
-    db->runStatement(stmt);
+    // db->prepareStatement(stmt, query, params);
+    // db->runStatement(stmt);
   }
 
   for (const auto &pair : funcCallLocksets) {
@@ -264,7 +264,8 @@ void FunctionVariableLocksets::addFuncCallLocksets(
     std::set<std::string> locks = pair.second;
 
     std::string funcId = getId(funcName, currTest);
-    query = "UPDATE function_variable_locksets SET caller_locks_changed = 1 "
+    // TODO - for an optimisation change to caller_locksets_changed
+    query = "UPDATE function_variable_locksets SET recently_changed = 1 "
             "WHERE id = ?;";
     params = {funcId};
     db->prepareStatement(stmt, query, params);
