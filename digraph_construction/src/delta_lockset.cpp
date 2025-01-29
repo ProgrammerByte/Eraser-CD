@@ -359,8 +359,10 @@ void DeltaLockset::updateLocksets(std::vector<std::string> changedFunctions) {
 
   for (const std::string &funcName : ordering) {
     if (!callGraph->shouldVisitNode(funcName)) {
+      std::cout << "DL SKIPPING " << funcName << std::endl;
       continue;
     }
+    std::cout << "DL Looking At " << funcName << std::endl;
     currFunc = funcName;
     if (funcCfgs.find(funcName) == funcCfgs.end()) {
       std::string fileName = callGraph->getFilenameFromFuncname(funcName);

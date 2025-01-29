@@ -170,16 +170,20 @@ void VariableLocksets::handleFunction(GraphNode *startNode,
 
 // TODO - startNode unlocks should be used by static eraser to remove from
 // current lockset before calling (recursive) functions
-void VariableLocksets::updateLocksets(
-    std::vector<std::string> changedFunctions) {
+void VariableLocksets::updateLocksets() {
+
+  std::vector<std::string> functions =
+      functionVariableLocksets->getFunctionsForTesting();
 
   std::vector<std::string> ordering =
-      callGraph->functionVariableLocksetsOrdering(changedFunctions);
+      callGraph->functionVariableLocksetsOrdering(functions);
 
   for (const std::string &funcName : ordering) {
     if (!functionVariableLocksets->shouldVisitNode(funcName)) {
+      std::cout << "VL SKIPPING " << funcName << std::endl;
       continue;
     }
+    std::cout << "VL looking at: " << funcName << std::endl;
     currFunc = funcName;
     functionVariableLocksets->startNewFunction(currFunc);
     FunctionInputs functionInputs =

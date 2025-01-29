@@ -15,8 +15,10 @@ void CumulativeLocksets::updateLocksets() {
 
   for (const std::string &funcName : ordering) {
     if (!functionCumulativeLocksets->shouldVisitNode(funcName)) {
+      std::cout << "CL SKIPPING " << funcName << std::endl;
       continue;
     }
+    std::cout << "CL Looking at " << funcName << std::endl;
     functionCumulativeLocksets->updateFunctionCumulativeLocksets(funcName);
   }
 }

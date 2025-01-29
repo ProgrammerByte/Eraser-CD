@@ -28,7 +28,7 @@ public:
                             FunctionVariableLocksets *functionVariableLocksets);
   virtual ~VariableLocksets() = default;
 
-  void updateLocksets(std::vector<std::string> changedFunctions);
+  void updateLocksets();
 
 private:
   CallGraph *callGraph;

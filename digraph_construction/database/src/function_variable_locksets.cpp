@@ -130,11 +130,11 @@ FunctionInputs FunctionVariableLocksets::updateAndCheckCombinedInputs() {
     bool changed = recentlyChanged[i];
     std::set<std::string> oldCombinedLocks = {};
     if (changed) {
-      // query = "DELETE FROM function_variable_locksets_combined_inputs WHERE "
-      //         "function_variable_locksets_id = ?;";
-      // params = {id};
-      // db->prepareStatement(stmt, query, params);
-      // db->runStatement(stmt);
+      query = "DELETE FROM function_variable_locksets_combined_inputs WHERE "
+              "function_variable_locksets_id = ?;";
+      params = {id};
+      db->prepareStatement(stmt, query, params);
+      db->runStatement(stmt);
     } else {
       query =
           "SELECT lock FROM function_variable_locksets_combined_inputs WHERE "
@@ -223,9 +223,9 @@ FunctionInputs FunctionVariableLocksets::updateAndCheckCombinedInputs() {
 
 bool FunctionVariableLocksets::shouldVisitNode(std::string funcName) {
   sqlite3_stmt *stmt;
-  std::string query =
-      "SELECT 1 FROM function_variable_locksets WHERE funcname "
-      "= ? AND (recently_changed = 0 AND caller_locks_changed = 0);";
+  std::string query = "SELECT 1 FROM function_variable_locksets WHERE funcname "
+                      "= ? AND (recently_changed = 0 AND caller_locks_changed "
+                      "= 0 AND callee_locks_changed = 0);";
 
   std::vector<std::string> params = {funcName};
   db->prepareStatement(stmt, query, params);
@@ -255,8 +255,8 @@ void FunctionVariableLocksets::addFuncCallLocksets(
   for (const std::string &id : ids) {
     query = "DELETE FROM function_variable_locksets_callers WHERE id = ?";
     params = {id};
-    // db->prepareStatement(stmt, query, params);
-    // db->runStatement(stmt);
+    db->prepareStatement(stmt, query, params);
+    db->runStatement(stmt);
   }
 
   for (const auto &pair : funcCallLocksets) {
@@ -367,8 +367,9 @@ VariableLocks FunctionVariableLocksets::getVariableLocks(std::string func,
 
 void FunctionVariableLocksets::markFunctionVariableLocksetsAsOld() {
   sqlite3_stmt *stmt;
-  std::string query = "UPDATE function_variable_locksets SET recently_changed "
-                      "= 0, caller_locks_changed = 0;";
+  std::string query =
+      "UPDATE function_variable_locksets SET recently_changed "
+      "= 0, caller_locks_changed = 0, callee_locks_changed = 0;";
   db->prepareStatement(stmt, query);
   db->runStatement(stmt);
 
@@ -392,4 +393,36 @@ std::set<std::string> FunctionVariableLocksets::getFunctionRecursiveUnlocks() {
   }
   sqlite3_finalize(stmt);
   return unlocks;
+}
+
+std::vector<std::string> FunctionVariableLocksets::getFunctionsForTesting() {
+  sqlite3_stmt *stmt;
+
+  std::string query = "UPDATE function_variable_locksets "
+                      "SET callee_locks_changed = 1 "
+                      "WHERE funcname IN ("
+                      "  SELECT am.funcname1 AS funcname "
+                      "  FROM adjacency_matrix AS am "
+                      "  JOIN function_eraser_sets AS fes "
+                      "  ON am.funcname2 = fes.funcname "
+                      "  WHERE fes.locks_changed = 1"
+                      ");";
+
+  db->prepareStatement(stmt, query);
+  db->runStatement(stmt);
+
+  query = "SELECT funcname FROM function_variable_locksets WHERE "
+          "callee_locks_changed = 1 "
+          "UNION SELECT funcname FROM nodes_table WHERE recently_changed = 1";
+
+  db->prepareStatement(stmt, query);
+
+  std::vector<std::string> functions = {};
+  while (sqlite3_step(stmt) == SQLITE_ROW) {
+    std::string funcName = std::string(
+        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0)));
+    functions.push_back(funcName);
+  }
+  sqlite3_finalize(stmt);
+  return functions;
 }

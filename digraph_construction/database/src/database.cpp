@@ -165,6 +165,7 @@ void Database::createTables() {
       testname TEXT,
       recently_changed BOOLEAN DEFAULT TRUE,
       caller_locks_changed BOOLEAN DEFAULT FALSE,
+      callee_locks_changed BOOLEAN DEFAULT FALSE,
       FOREIGN KEY (funcname) REFERENCES nodes_table(funcname) ON DELETE CASCADE,
       UNIQUE(funcname, testname)
     );

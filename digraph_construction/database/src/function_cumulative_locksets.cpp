@@ -6,9 +6,9 @@ FunctionCumulativeLocksets::FunctionCumulativeLocksets(
 
 bool FunctionCumulativeLocksets::shouldVisitNode(std::string funcName) {
   sqlite3_stmt *stmt;
-  std::string query =
-      "SELECT 1 FROM function_variable_locksets WHERE funcname "
-      "= ? AND (recently_changed = 1 OR caller_locks_changed = 1);";
+  std::string query = "SELECT 1 FROM function_variable_locksets WHERE funcname "
+                      "= ? AND (recently_changed = 1 OR caller_locks_changed = "
+                      "1 OR callee_locks_changed = 1);";
   std::vector<std::string> params = {funcName};
   db->prepareStatement(stmt, query, params);
   bool result = sqlite3_step(stmt) == SQLITE_ROW;

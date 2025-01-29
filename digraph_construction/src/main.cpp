@@ -46,7 +46,7 @@ int main() {
                     "test_files/largest_check_multi_file/largest_check.c",
                     "test_files/largest_check_multi_file/largest_check.h"};
     changedFiles = {"test_files/largest_check_multi_file/recur.c"};
-    changedFiles = {"test_files/largest_check_multi_file/largest_check.c"};
+    // changedFiles = {"test_files/largest_check_multi_file/largest_check.c"};
   }
 
   std::cout << "Parsing changed files:" << std::endl;
@@ -78,15 +78,13 @@ int main() {
   CumulativeLocksets *cumulativeLocksets =
       new CumulativeLocksets(callGraph, functionCumulativeLocksets);
 
-  // TODO - INCLUDE PARENTS OF CHANGED DELTA LOCKSETS HERE!!!
-  variableLocksets->updateLocksets(functions);
+  variableLocksets->updateLocksets();
   cumulativeLocksets->updateLocksets();
 
   functionEraserSets->markFunctionEraserSetsAsOld();
   functionVariableLocksets->markFunctionVariableLocksetsAsOld();
   callGraph->deleteStaleNodes();
 
-  // staticEraser->testFunction("main");
   std::set<std::string> dataRaces =
       functionCumulativeLocksets->detectDataRaces();
 

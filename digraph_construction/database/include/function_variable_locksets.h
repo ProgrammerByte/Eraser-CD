@@ -31,6 +31,7 @@ public:
   VariableLocks getVariableLocks(std::string func, std::string id);
   void markFunctionVariableLocksetsAsOld();
   std::set<std::string> getFunctionRecursiveUnlocks();
+  std::vector<std::string> getFunctionsForTesting();
 
 private:
   void extractFunctionLocksFromDb(std::string funcName,
