@@ -30,8 +30,7 @@ DiffAnalysis::getChangedFiles(const std::string &repoPath,
   std::string file;
   while (std::getline(stream, file)) {
     if (!file.empty() && (file.size() > 2) &&
-        (file.substr(file.size() - 2) == ".c" ||
-         file.substr(file.size() - 2) == ".h")) {
+        (file.substr(file.size() - 2) == ".c")) {
       changedFiles.push_back(file);
     }
   }
@@ -42,8 +41,7 @@ DiffAnalysis::getChangedFiles(const std::string &repoPath,
 std::vector<std::string>
 DiffAnalysis::getAllFiles(const std::string &repoPath) {
   std::string changeDirCmd = "cd " + repoPath + " && ";
-  std::string findCmd =
-      changeDirCmd + "find . -type f \\( -name '*.c' -o -name '*.h' \\)";
+  std::string findCmd = changeDirCmd + "find . -type f \\( -name '*.c' \\)";
 
   std::string output = executeCommand(findCmd);
 
