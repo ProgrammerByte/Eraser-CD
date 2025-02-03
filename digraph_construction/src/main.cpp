@@ -15,7 +15,7 @@
 #include <vector>
 
 int main() {
-  bool initialCommit = false;
+  bool initialCommit = true;
   Database *db = new Database(initialCommit);
   FunctionEraserSets *functionEraserSets = new FunctionEraserSets(db);
   CallGraph *callGraph = new CallGraph(db);
@@ -33,6 +33,10 @@ int main() {
                     "test_files/largest_check_multi_file/globals.h",
                     "test_files/largest_check_multi_file/largest_check.c",
                     "test_files/largest_check_multi_file/largest_check.h"};
+    // changedFiles = {"test_files/single_files/largest_check.c"};
+    // changedFiles = {"test_files/test.c"};
+    changedFiles = {"~/dissertation/Splash-4/Splash-4/fft/fft.c"};
+    changedFiles = {"test_files/Splash-4/fft.c"};
   } else {
     std::string commitHash1 = "300e894461d8a7cf21a4d2e4b49281e4f940a472";
     std::string commitHash2 = "4127b6c626f3fe9cb311b59c3b14ede9222c420b";
