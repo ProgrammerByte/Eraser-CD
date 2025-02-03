@@ -67,6 +67,7 @@ void CallGraph::markNodes(std::vector<std::string> &startNodes,
           " JOIN nodes_table ON nodes_table.funcname = "
           " adjacency_matrix.funcname1 WHERE adjacency_matrix.funcname2 IN " +
           db->createTupleList(q) +
+          " AND nodes_table.filename IS NOT NULL"
           " GROUP BY funcname1"
           "),"
           "result AS ("
@@ -88,6 +89,7 @@ void CallGraph::markNodes(std::vector<std::string> &startNodes,
           " adjacency_matrix.funcname2 WHERE "
           " adjacency_matrix.funcname1 IN " +
           db->createTupleList(q) +
+          " AND nodes_table.filename IS NOT NULL"
           " GROUP BY funcname2"
           "),"
           "result AS ("
@@ -159,6 +161,7 @@ std::vector<std::string> CallGraph::traverseGraph(bool reverse = false) {
           " JOIN nodes_table ON nodes_table.funcname = "
           " adjacency_matrix.funcname1 WHERE adjacency_matrix.funcname2 IN " +
           db->createTupleList(q) +
+          " AND nodes_table.filename IS NOT NULL"
           " GROUP BY funcname1"
           "),"
           "result AS ("
@@ -180,6 +183,7 @@ std::vector<std::string> CallGraph::traverseGraph(bool reverse = false) {
           " adjacency_matrix.funcname2 WHERE "
           " adjacency_matrix.funcname1 IN " +
           db->createTupleList(q) +
+          " AND nodes_table.filename IS NOT NULL"
           " GROUP BY funcname2"
           "),"
           "result AS ("
