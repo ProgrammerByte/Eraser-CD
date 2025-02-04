@@ -171,8 +171,7 @@ int main(int argc, char *argv[]) {
   };
 
   while ((c = getopt(argc, argv, "p:m:n:l:stoh")) != -1) {
-    switch (c) {
-    case 'p':
+    if (c == 'p') {
       P = atoi(optarg);
       if (P < 1) {
         printerr("P must be >= 1\n");
@@ -182,40 +181,33 @@ int main(int argc, char *argv[]) {
         printerr("P must be a power of 2\n");
         exit(-1);
       }
-      break;
-    case 'm':
+    } else if (c == 'm') {
       M = atoi(optarg);
       m1 = M / 2;
       if (2 * m1 != M) {
         printerr("M must be even\n");
         exit(-1);
       }
-      break;
-    case 'n':
+    } else if (c == 'n') {
       num_cache_lines = atoi(optarg);
       orig_num_lines = num_cache_lines;
       if (num_cache_lines < 1) {
         printerr("Number of cache lines must be >= 1\n");
         exit(-1);
       }
-      break;
-    case 'l':
+    } else if (c == 'l') {
       log2_line_size = atoi(optarg);
       if (log2_line_size < 0) {
         printerr("Log base 2 of cache line length in bytes must be >= 0\n");
         exit(-1);
       }
-      break;
-    case 's':
+    } else if (c == 's') {
       dostats = !dostats;
-      break;
-    case 't':
+    } else if (c == 't') {
       test_result = !test_result;
-      break;
-    case 'o':
+    } else if (c == 'o') {
       doprint = !doprint;
-      break;
-    case 'h':
+    } else if (c == 'h') {
       printf("Usage: FFT <options>\n\n");
       printf("options:\n");
       printf("  -mM : M = even integer; 2**M total complex data points "
@@ -234,7 +226,6 @@ int main(int argc, char *argv[]) {
       printf("Default: FFT -m%1d -p%1d -n%1d -l%1d\n", DEFAULT_M, DEFAULT_P,
              NUM_CACHE_LINES, LOG2_LINE_SIZE);
       exit(0);
-      break;
     }
   }
 

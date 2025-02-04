@@ -25,7 +25,6 @@ int main() {
   std::string repoPath = "~/dissertation/Eraser-CD";
   std::vector<std::string> changedFiles;
   if (initialCommit) {
-    changedFiles = diffAnalysis->getAllFiles(repoPath);
     // changedFiles = {"test_files/single_files/largest_check.c"};
     changedFiles = {"test_files/largest_check_multi_file/main.c",
                     "test_files/largest_check_multi_file/recur.c",
@@ -35,8 +34,13 @@ int main() {
                     "test_files/largest_check_multi_file/largest_check.h"};
     // changedFiles = {"test_files/single_files/largest_check.c"};
     // changedFiles = {"test_files/test.c"};
-    changedFiles = {"~/dissertation/Splash-4/Splash-4/fft/fft.c"};
-    changedFiles = {"test_files/Splash-4/fft.c"};
+    changedFiles = {"test_files/Splash-4/altered/fft.c"};
+
+    std::string repoPath = "test_files/Splash-4/altered/barnes";
+    changedFiles = diffAnalysis->getAllFiles(repoPath);
+    for (std::string &file : changedFiles) {
+      file = repoPath + "/" + file;
+    }
   } else {
     std::string commitHash1 = "300e894461d8a7cf21a4d2e4b49281e4f940a472";
     std::string commitHash2 = "4127b6c626f3fe9cb311b59c3b14ede9222c420b";
