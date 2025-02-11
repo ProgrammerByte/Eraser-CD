@@ -176,7 +176,7 @@ EraserSets FunctionEraserSets::extractSetsFromDb(std::string funcName) {
   sqlite3_stmt *stmt;
 
   std::string query = "SELECT * FROM function_locks WHERE funcname = ?;";
-  std::vector<std::string> params = {currFunc};
+  std::vector<std::string> params = {funcName};
   db->prepareStatement(stmt, query, params);
   while (sqlite3_step(stmt) == SQLITE_ROW) {
     std::string varName =

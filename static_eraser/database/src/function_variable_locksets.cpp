@@ -13,7 +13,7 @@ std::string FunctionVariableLocksets::getId(std::string funcName,
                       "funcname = ? AND testname = ?;";
   std::vector<std::string> params = {funcName, testName};
   db->prepareStatement(stmt, query, params);
-  std::string id;
+  std::string id = "";
 
   if (sqlite3_step(stmt) == SQLITE_ROW) {
     id = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
@@ -240,24 +240,16 @@ void FunctionVariableLocksets::addFuncCallLocksets(
   std::string query;
   std::vector<std::string> params;
 
-  query = "SELECT fvlc.id FROM function_variable_locksets_callers AS fvlc JOIN "
-          "function_variable_locksets AS fvl ON fvl.id = "
-          "fvlc.function_variable_locksets_id WHERE caller = "
-          "? AND testname = ?;";
+  query =
+      "DELETE FROM function_variable_locksets_callers WHERE id IN ("
+      " SELECT fvlc.id FROM function_variable_locksets_callers AS fvlc JOIN "
+      " function_variable_locksets AS fvl ON fvl.id = "
+      " fvlc.function_variable_locksets_id WHERE fvlc.caller = "
+      " ? AND fvl.testname = ?"
+      ");";
   params = {currFunc, currTest};
   db->prepareStatement(stmt, query, params);
-  std::vector<std::string> ids = {};
-  if (sqlite3_step(stmt) == SQLITE_ROW) {
-    ids.push_back(reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0)));
-  }
-  sqlite3_finalize(stmt);
-
-  for (const std::string &id : ids) {
-    query = "DELETE FROM function_variable_locksets_callers WHERE id = ?";
-    params = {id};
-    db->prepareStatement(stmt, query, params);
-    db->runStatement(stmt);
-  }
+  db->runStatement(stmt);
 
   for (const auto &pair : funcCallLocksets) {
     std::string funcName = pair.first;

@@ -42,6 +42,7 @@ struct VariableInfo {
   int scopeDepth;
   int scopeNum;
   bool isStatic;
+  bool isAtomic;
 };
 
 struct VisitorData {

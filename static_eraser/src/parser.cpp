@@ -70,12 +70,14 @@ VariableInfo findVariableInfo(std::string varName) {
   variableInfo.scopeDepth = 0;
   variableInfo.scopeNum = 0;
   variableInfo.isStatic = false;
+  variableInfo.isAtomic = false;
   scopeStack[0].insert({varName, variableInfo});
   return variableInfo;
 }
 
 bool isSharedVar(struct VariableInfo variableInfo) {
-  return variableInfo.isStatic || variableInfo.scopeDepth == 0;
+  return !variableInfo.isAtomic &&
+         (variableInfo.isStatic || variableInfo.scopeDepth == 0);
 }
 
 bool isSharedVar(std::string varName) {
@@ -237,9 +239,12 @@ void classifyVariable(CXCursor cursor, LhsType lhsType,
   bool isDeclaration =
       cursorKind == CXCursor_VarDecl || cursorKind == CXCursor_ParmDecl;
 
+  CXString typeSpelling = clang_getTypeSpelling(cursorType);
+  std::string typeString = clang_getCString(typeSpelling);
   if (isDeclaration) {
     variableInfo.isStatic =
         clang_Cursor_getStorageClass(cursor) == CX_SC_Static;
+    variableInfo.isAtomic = typeString.find("_Atomic") != std::string::npos;
     variableInfo.scopeDepth = scopeDepth;
     variableInfo.scopeNum = scopeNums[scopeDepth];
     scopeStack[scopeDepth].insert({varName, variableInfo});
@@ -247,17 +252,15 @@ void classifyVariable(CXCursor cursor, LhsType lhsType,
   } else {
     variableInfo = findVariableInfo(varName);
   }
-  if (!variableInfo.isStatic && variableInfo.scopeDepth > 0) {
+  if (variableInfo.isAtomic ||
+      (!variableInfo.isStatic && variableInfo.scopeDepth > 0)) {
     return;
   }
-  CXString typeSpelling = clang_getTypeSpelling(cursorType);
-  if (std::string(clang_getCString(typeSpelling)) == "pthread_mutex_t") {
+  if (typeString.find("pthread_mutex_t") != std::string::npos) {
     clang_disposeString(typeSpelling);
     return;
   }
   clang_disposeString(typeSpelling);
-
-  bool global = variableInfo.scopeDepth == 0;
 
   if (variableInfo.isStatic) {
     std::string fileName = getCursorFilename(cursor);
@@ -327,8 +330,6 @@ void onNewScope() {
 CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
                            CXClientData clientData) {
   CXCursorKind cursorKind = clang_getCursorKind(cursor);
-  CXCursorKind parentKind =
-      clang_getCursorKind(clang_getCursorSemanticParent(cursor));
 
   if (cursorKind == CXCursor_FunctionDecl) {
     ignoreNextCompound = true;
