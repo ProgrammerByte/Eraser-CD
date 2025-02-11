@@ -2,9 +2,10 @@
 
 std::unordered_map<std::string, StartNode *> funcCfgs;
 
-Parser::Parser(CallGraph *callGraphPtr) {
+Parser::Parser(CallGraph *callGraphPtr, FileIncludes *fileIncludesPtr) {
   funcCfgs = {};
   callGraph = callGraphPtr;
+  fileIncludes = fileIncludesPtr;
   environment = new ConstructionEnvironment();
 }
 
@@ -477,6 +478,24 @@ void Parser::parseFile(const char *fileName) {
     std::cerr << "Unable to parse translation unit. Quitting." << std::endl;
     exit(-1);
   }
+
+  this->fileNameString = fileName;
+  fileIncludes->clearIncludes(fileNameString);
+  clang_getInclusions(
+      unit,
+      [](CXFile includedFile, CXSourceLocation *_includer,
+         unsigned int _isIncluderNonlocal, CXClientData data) {
+        CXString includedFileName = clang_getFileName(includedFile);
+        std::string fileName = clang_getCString(includedFileName);
+        clang_disposeString(includedFileName);
+        Parser *parser = reinterpret_cast<Parser *>(data);
+        if (parser->fileNameString != fileName &&
+            fileName.find("/usr/include/") == std::string::npos &&
+            fileName.find("/usr/lib/clang/") == std::string::npos) {
+          parser->fileIncludes->addInclude(parser->fileNameString, fileName);
+        }
+      },
+      this);
 
   CXCursor cursor = clang_getTranslationUnitCursor(unit);
 

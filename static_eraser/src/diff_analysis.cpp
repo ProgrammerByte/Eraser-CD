@@ -1,4 +1,8 @@
 #include "diff_analysis.h"
+#include "set_operations.h"
+
+DiffAnalysis::DiffAnalysis(FileIncludes *fileIncludes)
+    : fileIncludes(fileIncludes){};
 
 std::string DiffAnalysis::executeCommand(const std::string &command) {
   std::array<char, 128> buffer;
@@ -14,7 +18,7 @@ std::string DiffAnalysis::executeCommand(const std::string &command) {
   return result;
 }
 
-std::vector<std::string>
+std::set<std::string>
 DiffAnalysis::getChangedFiles(const std::string &repoPath,
                               const std::string &commitHash1,
                               const std::string &commitHash2) {
@@ -25,32 +29,32 @@ DiffAnalysis::getChangedFiles(const std::string &repoPath,
 
   std::string output = executeCommand(gitDiffCmd);
 
-  std::vector<std::string> changedFiles;
+  std::set<std::string> changedFiles;
   std::istringstream stream(output);
   std::string file;
   while (std::getline(stream, file)) {
     if (!file.empty() && (file.size() > 2) &&
         (file.substr(file.size() - 2) == ".c")) {
-      changedFiles.push_back(file);
+      changedFiles.insert(file);
+      changedFiles += fileIncludes->getChildren(file);
     }
   }
 
   return changedFiles;
 }
 
-std::vector<std::string>
-DiffAnalysis::getAllFiles(const std::string &repoPath) {
+std::set<std::string> DiffAnalysis::getAllFiles(const std::string &repoPath) {
   std::string changeDirCmd = "cd " + repoPath + " && ";
   std::string findCmd = changeDirCmd + "find . -type f \\( -name '*.c' \\)";
 
   std::string output = executeCommand(findCmd);
 
-  std::vector<std::string> allFiles;
+  std::set<std::string> allFiles;
   std::istringstream stream(output);
   std::string file;
   while (std::getline(stream, file)) {
     if (!file.empty()) {
-      allFiles.push_back(file);
+      allFiles.insert(repoPath + "/" + file.substr(2));
     }
   }
 

@@ -51,6 +51,15 @@ void Database::createTable(std::string query, std::string tableName) {
 
 void Database::createTables() {
   createTable(R"(
+    CREATE TABLE file_includes (
+      filename TEXT,
+      included_file TEXT,
+      UNIQUE(filename, included_file)
+    );
+  )",
+              "file_includes");
+
+  createTable(R"(
     CREATE TABLE nodes_table (
       funcname TEXT PRIMARY KEY,
       recursive BOOLEAN DEFAULT FALSE,

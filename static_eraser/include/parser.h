@@ -5,6 +5,7 @@
 #include "continue_node.h"
 #include "endif_node.h"
 #include "endwhile_node.h"
+#include "file_includes.h"
 #include "function_call_node.h"
 #include "if_node.h"
 #include "lock_node.h"
@@ -74,9 +75,13 @@ static CallGraph *callGraph;
 
 class Parser {
 public:
-  explicit Parser(CallGraph *callGraph);
+  explicit Parser(CallGraph *callGraph, FileIncludes *fileIncludes);
   virtual ~Parser() = default;
 
   void parseFile(const char *fileName);
   std::vector<std::string> getFunctions();
+
+private:
+  FileIncludes *fileIncludes;
+  std::string fileNameString;
 };

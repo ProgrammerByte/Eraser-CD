@@ -4,6 +4,7 @@
 #include "database.h"
 #include "delta_lockset.h"
 #include "diff_analysis.h"
+#include "file_includes.h"
 #include "function_cumulative_locksets.h"
 #include "function_variable_locksets.h"
 #include "graph_visualizer.h"
@@ -15,15 +16,16 @@
 #include <vector>
 
 int main() {
-  bool initialCommit = true;
+  bool initialCommit = false;
   Database *db = new Database(initialCommit);
   FunctionEraserSets *functionEraserSets = new FunctionEraserSets(db);
   CallGraph *callGraph = new CallGraph(db);
-  DiffAnalysis *diffAnalysis = new DiffAnalysis();
-  Parser *parser = new Parser(callGraph);
+  FileIncludes *fileIncludes = new FileIncludes(db);
+  DiffAnalysis *diffAnalysis = new DiffAnalysis(fileIncludes);
+  Parser *parser = new Parser(callGraph, fileIncludes);
 
   std::string repoPath = "~/dissertation/Eraser-CD";
-  std::vector<std::string> changedFiles;
+  std::set<std::string> changedFiles;
   if (initialCommit) {
     // changedFiles = {"test_files/single_files/largest_check.c"};
     changedFiles = {"test_files/largest_check_multi_file/main.c",
@@ -38,9 +40,6 @@ int main() {
 
     std::string repoPath = "test_files/Splash-4/altered/barnes";
     changedFiles = diffAnalysis->getAllFiles(repoPath);
-    for (std::string &file : changedFiles) {
-      file = repoPath + "/" + file;
-    }
   } else {
     std::string commitHash1 = "300e894461d8a7cf21a4d2e4b49281e4f940a472";
     std::string commitHash2 = "4127b6c626f3fe9cb311b59c3b14ede9222c420b";
@@ -55,6 +54,10 @@ int main() {
                     "test_files/largest_check_multi_file/largest_check.h"};
     changedFiles = {"test_files/largest_check_multi_file/recur.c"};
     // changedFiles = {"test_files/largest_check_multi_file/largest_check.c"};
+
+    changedFiles = {"test_files/Splash-4/altered/barnes/code.h"};
+    changedFiles +=
+        fileIncludes->getChildren("test_files/Splash-4/altered/barnes/code.h");
   }
 
   std::cout << "Parsing changed files:" << std::endl;
