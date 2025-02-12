@@ -59,26 +59,13 @@ inline std::ostream &operator<<(std::ostream &stream, const CXString &str) {
 }
 
 extern std::unordered_map<std::string, StartNode *> funcCfgs;
-static std::unordered_map<std::string, bool> funcMap = {};
-static std::vector<std::string> functions = {};
-static std::set<std::string> functionDeclarations = {};
-static std::vector<std::unordered_map<std::string, VariableInfo>> scopeStack =
-    {};
-static std::vector<unsigned int> scopeNums = {0};
-static int inFunc = 0;
-static int scopeDepth = 0;
-static bool ignoreNextCompound = false;
-static std::string funcName = "";
-static StartNode *startNode = nullptr;
-static ConstructionEnvironment *environment;
-static CallGraph *callGraph;
 
 class Parser {
 public:
   explicit Parser(CallGraph *callGraph, FileIncludes *fileIncludes);
   virtual ~Parser() = default;
 
-  void parseFile(const char *fileName);
+  void parseFile(const char *fileName, bool fileChanged = false);
   std::vector<std::string> getFunctions();
 
 private:

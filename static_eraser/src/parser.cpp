@@ -1,5 +1,20 @@
 #include "parser.h"
 
+static std::unordered_map<std::string, bool> funcMap = {};
+static std::vector<std::string> functions = {};
+static std::set<std::string> functionDeclarations = {};
+static std::vector<std::unordered_map<std::string, VariableInfo>> scopeStack =
+    {};
+static std::vector<unsigned int> scopeNums = {0};
+static int inFunc = 0;
+static int scopeDepth = 0;
+static bool ignoreNextCompound = false;
+static std::string funcName = "";
+static StartNode *startNode = nullptr;
+static ConstructionEnvironment *environment;
+static CallGraph *callGraph;
+static bool updateCallGraph;
+
 std::unordered_map<std::string, StartNode *> funcCfgs;
 
 Parser::Parser(CallGraph *callGraphPtr, FileIncludes *fileIncludesPtr) {
@@ -190,7 +205,9 @@ void handleFunctionCall(CXCursor cursor, std::vector<GraphNode *> *nodesToAdd) {
       }
       // TODO - MAYBE CHANGE EDGE TYPE HERE?? ONLY AN OPTIMISATION FOR DELTA
       // LOCKSETS
-      callGraph->addEdge(caller, funcName, true);
+      if (updateCallGraph) {
+        callGraph->addEdge(caller, funcName, true);
+      }
     }
   } else if (funcName == "pthread_join") {
     std::string spelling = getNthArg(cursor, 1);
@@ -218,7 +235,9 @@ void handleFunctionCall(CXCursor cursor, std::vector<GraphNode *> *nodesToAdd) {
   } else {
     funcName = getFuncName(cursor, funcName);
     (*nodesToAdd).push_back(new FunctionCallNode(funcName));
-    callGraph->addEdge(caller, funcName, false);
+    if (updateCallGraph) {
+      callGraph->addEdge(caller, funcName, false);
+    }
   }
 }
 
@@ -347,7 +366,9 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
   } else if (cursorKind == CXCursor_CompoundStmt) {
     if (ignoreNextCompound) {
       startNode = environment->startNewTree(funcName);
-      callGraph->addNode(funcName, getCursorFilename(cursor));
+      if (updateCallGraph) {
+        callGraph->addNode(funcName, getCursorFilename(cursor));
+      }
       ignoreNextCompound = false;
     } else {
       onNewScope();
@@ -457,7 +478,7 @@ CXChildVisitResult visitor(CXCursor cursor, CXCursor parent,
   return CXChildVisit_Continue;
 }
 
-void Parser::parseFile(const char *fileName) {
+void Parser::parseFile(const char *fileName, bool fileChanged) {
   funcMap = {};
   functionDeclarations = {};
   scopeStack.clear();
@@ -467,6 +488,7 @@ void Parser::parseFile(const char *fileName) {
   ignoreNextCompound = false;
   funcName = "";
   startNode = nullptr;
+  updateCallGraph = fileChanged;
 
   scopeStack.push_back(std::unordered_map<std::string, VariableInfo>());
 
@@ -479,29 +501,31 @@ void Parser::parseFile(const char *fileName) {
     exit(-1);
   }
 
-  this->fileNameString = fileName;
-  fileIncludes->clearIncludes(fileNameString);
-  clang_getInclusions(
-      unit,
-      [](CXFile includedFile, CXSourceLocation *_includer,
-         unsigned int _isIncluderNonlocal, CXClientData data) {
-        CXString includedFileName = clang_getFileName(includedFile);
-        std::string fileName = clang_getCString(includedFileName);
-        clang_disposeString(includedFileName);
-        Parser *parser = reinterpret_cast<Parser *>(data);
-        if (parser->fileNameString != fileName &&
-            fileName.find("/usr/include/") == std::string::npos &&
-            fileName.find("/usr/lib/clang/") == std::string::npos) {
-          parser->fileIncludes->addInclude(parser->fileNameString, fileName);
-        }
-      },
-      this);
-
   CXCursor cursor = clang_getTranslationUnitCursor(unit);
 
   VisitorData initialData = {0, {}, LHS_NONE};
 
   clang_visitChildren(cursor, visitor, &initialData);
+
+  if (fileChanged) {
+    this->fileNameString = fileName;
+    fileIncludes->clearIncludes(fileNameString);
+    clang_getInclusions(
+        unit,
+        [](CXFile includedFile, CXSourceLocation *_includer,
+           unsigned int _isIncluderNonlocal, CXClientData data) {
+          CXString includedFileName = clang_getFileName(includedFile);
+          std::string fileName = clang_getCString(includedFileName);
+          clang_disposeString(includedFileName);
+          Parser *parser = reinterpret_cast<Parser *>(data);
+          if (parser->fileNameString != fileName &&
+              fileName.find("/usr/include/") == std::string::npos &&
+              fileName.find("/usr/lib/clang/") == std::string::npos) {
+            parser->fileIncludes->addInclude(parser->fileNameString, fileName);
+          }
+        },
+        this);
+  }
 
   clang_disposeTranslationUnit(unit);
   clang_disposeIndex(index);

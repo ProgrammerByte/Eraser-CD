@@ -16,7 +16,7 @@
 #include <vector>
 
 int main() {
-  bool initialCommit = false;
+  bool initialCommit = true;
   Database *db = new Database(initialCommit);
   FunctionEraserSets *functionEraserSets = new FunctionEraserSets(db);
   CallGraph *callGraph = new CallGraph(db);
@@ -64,7 +64,7 @@ int main() {
   for (const auto &file : changedFiles) {
     std::cout << file << std::endl;
     callGraph->markNodesAsStale(file);
-    parser->parseFile(file.c_str());
+    parser->parseFile(file.c_str(), true);
   }
   std::cout << std::endl;
 
