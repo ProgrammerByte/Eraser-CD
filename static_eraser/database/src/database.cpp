@@ -62,7 +62,6 @@ void Database::createTables() {
   createTable(R"(
     CREATE TABLE nodes_table (
       funcname TEXT PRIMARY KEY,
-      recursive BOOLEAN DEFAULT FALSE,
       indegree INTEGER DEFAULT 0,
       marked BOOLEAN DEFAULT FALSE,
       recently_changed BOOLEAN DEFAULT TRUE,

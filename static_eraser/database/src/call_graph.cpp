@@ -33,12 +33,6 @@ void CallGraph::addEdge(std::string caller, std::string callee, bool onThread) {
     params = {caller, callee, db->createBoolean(onThread)};
     db->prepareStatement(stmt, query, params);
     db->runStatement(stmt);
-  } else {
-    query = "UPDATE nodes_table SET recursive = 1 WHERE funcname = ?;";
-
-    params = {caller};
-    db->prepareStatement(stmt, query, params);
-    db->runStatement(stmt);
   }
 }
 
