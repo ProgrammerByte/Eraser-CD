@@ -66,12 +66,12 @@ bool DeltaLockset::recursiveFunctionCall(std::string functionName,
       functionEraserSets->combineSetsForRecursiveThreads(nextSets, sets);
     } else {
       functionEraserSets->combineSets(nextSets, sets);
+      functionEraserSets->saveRecursiveUnlocks(sets.unlocks);
     }
     if (nextSets != nodeSets[startNode] || !recursive) {
       nodeSets[startNode] = nextSets;
       backwardQueue.push_back(startNode);
     }
-    functionEraserSets->saveRecursiveUnlocks(sets.unlocks);
     if (!recursive) {
       return true;
     }
