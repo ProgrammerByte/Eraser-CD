@@ -1,4 +1,5 @@
 #include "variable_locksets.h"
+#include "debug_tools.h"
 #include "set_operations.h"
 
 VariableLocksets::VariableLocksets(
@@ -186,10 +187,10 @@ void VariableLocksets::updateLocksets() {
 
   for (const std::string &funcName : ordering) {
     if (!functionVariableLocksets->shouldVisitNode(funcName)) {
-      std::cout << "VL SKIPPING " << funcName << std::endl;
+      debugCout << "VL SKIPPING " << funcName << std::endl;
       continue;
     }
-    std::cout << "VL looking at: " << funcName << std::endl;
+    debugCout << "VL looking at: " << funcName << std::endl;
     currFunc = funcName;
     functionVariableLocksets->startNewFunction(currFunc);
     FunctionInputs functionInputs =
@@ -199,7 +200,7 @@ void VariableLocksets::updateLocksets() {
     // TODO - use functionInputs.reachableTests at some point!!! - revise
     // this!!!
 
-    std::cout << "Function: " << funcName << std::endl;
+    debugCout << "Function: " << funcName << std::endl;
     for (const auto &pair : combinedInputs) {
       currTest = pair.first;
       functionVariableLocksets->startNewTest(currTest);
@@ -213,18 +214,18 @@ void VariableLocksets::updateLocksets() {
       std::unordered_map<std::string, std::set<std::string>> variableLocks =
           functionVariableLocksets->getVariableLocks();
 
-      std::cout << "Test: " << currTest << std::endl;
+      debugCout << "Test: " << currTest << std::endl;
       for (const auto &pair : variableLocks) {
         std::string varName = pair.first;
         std::set<std::string> locks = pair.second;
-        std::cout << "Variable: " << varName << std::endl;
-        std::cout << "Locks: ";
+        debugCout << "Variable: " << varName << std::endl;
+        debugCout << "Locks: ";
         for (const std::string &lock : locks) {
-          std::cout << lock << ", ";
+          debugCout << lock << ", ";
         }
-        std::cout << std::endl;
+        debugCout << std::endl;
       }
     }
-    std::cout << std::endl;
+    debugCout << std::endl;
   }
 }

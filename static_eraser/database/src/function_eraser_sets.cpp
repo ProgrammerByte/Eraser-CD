@@ -180,10 +180,8 @@ EraserSets FunctionEraserSets::extractSetsFromDb(std::string funcName) {
   std::vector<std::string> params = {funcName};
   db->prepareStatement(stmt, query, params);
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    std::string varName =
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
-    std::string type =
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2));
+    std::string varName = db->getStringFromStatement(stmt, 1);
+    std::string type = db->getStringFromStatement(stmt, 2);
     if (type == "lock") {
       sets.locks.insert(varName);
     } else {
@@ -195,10 +193,8 @@ EraserSets FunctionEraserSets::extractSetsFromDb(std::string funcName) {
   query = "SELECT * FROM function_vars WHERE funcname = ?;";
   db->prepareStatement(stmt, query, params);
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    std::string varName =
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
-    std::string type =
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2));
+    std::string varName = db->getStringFromStatement(stmt, 1);
+    std::string type = db->getStringFromStatement(stmt, 2);
     if (type == "external_read") {
       sets.externalReads.insert(varName);
     } else if (type == "internal_read") {
@@ -220,10 +216,8 @@ EraserSets FunctionEraserSets::extractSetsFromDb(std::string funcName) {
   query = "SELECT * FROM queued_writes WHERE funcname = ?;";
   db->prepareStatement(stmt, query, params);
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    std::string tid =
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
-    std::string varName =
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2));
+    std::string tid = db->getStringFromStatement(stmt, 1);
+    std::string varName = db->getStringFromStatement(stmt, 2);
     if (sets.queuedWrites.find(tid) == sets.queuedWrites.end()) {
       sets.queuedWrites.insert({tid, {varName}});
     } else {
@@ -235,8 +229,7 @@ EraserSets FunctionEraserSets::extractSetsFromDb(std::string funcName) {
   query = "SELECT * FROM finished_threads WHERE funcname = ?;";
   db->prepareStatement(stmt, query, params);
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    std::string varName =
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
+    std::string varName = db->getStringFromStatement(stmt, 1);
     sets.finishedThreads.insert(varName);
   }
   sqlite3_finalize(stmt);
@@ -244,10 +237,8 @@ EraserSets FunctionEraserSets::extractSetsFromDb(std::string funcName) {
   query = "SELECT * FROM active_threads WHERE funcname = ?;";
   db->prepareStatement(stmt, query, params);
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    std::string varName =
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
-    std::string tid =
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2));
+    std::string varName = db->getStringFromStatement(stmt, 1);
+    std::string tid = db->getStringFromStatement(stmt, 2);
     if (sets.activeThreads.find(varName) == sets.activeThreads.end()) {
       sets.activeThreads.insert({varName, {tid}});
     } else {

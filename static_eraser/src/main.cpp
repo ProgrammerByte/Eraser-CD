@@ -2,6 +2,7 @@
 #include "construction_environment.h"
 #include "cumulative_locksets.h"
 #include "database.h"
+#include "debug_tools.h"
 #include "delta_lockset.h"
 #include "diff_analysis.h"
 #include "file_includes.h"
@@ -10,13 +11,29 @@
 #include "graph_visualizer.h"
 #include "parser.h"
 #include "variable_locksets.h"
+#include <chrono>
 #include <clang-c/Index.h>
 #include <iostream>
+#include <sys/resource.h>
 #include <unordered_map>
 #include <vector>
 
+void logTimeSinceLast(
+    std::string label,
+    std::chrono::time_point<std::chrono::high_resolution_clock> &currTime) {
+  auto nextTime = std::chrono::high_resolution_clock::now();
+  auto duration =
+      std::chrono::duration_cast<std::chrono::milliseconds>(nextTime - currTime)
+          .count();
+  std::cout << label << duration << "ms" << std::endl;
+  currTime = nextTime;
+}
+
 int main() {
-  bool initialCommit = true;
+  auto startTime = std::chrono::high_resolution_clock::now();
+  auto currTime = startTime;
+
+  bool initialCommit = false;
   Database *db = new Database(initialCommit);
   FunctionEraserSets *functionEraserSets = new FunctionEraserSets(db);
   CallGraph *callGraph = new CallGraph(db);
@@ -55,27 +72,31 @@ int main() {
     changedFiles = {"test_files/largest_check_multi_file/recur.c"};
     // changedFiles = {"test_files/largest_check_multi_file/largest_check.c"};
 
-    changedFiles = {"test_files/Splash-4/altered/barnes/code.h"};
-    changedFiles +=
-        fileIncludes->getChildren("test_files/Splash-4/altered/barnes/code.h");
+    changedFiles = {"test_files/Splash-4/altered/barnes/code.c"};
+    // changedFiles +=
+    //     fileIncludes->getChildren("test_files/Splash-4/altered/barnes/code.h");
   }
 
-  std::cout << "Parsing changed files:" << std::endl;
+  debugCout << "Parsing changed files:" << std::endl;
   for (const auto &file : changedFiles) {
-    std::cout << file << std::endl;
+    debugCout << file << std::endl;
     callGraph->markNodesAsStale(file);
     parser->parseFile(file.c_str(), true);
   }
-  std::cout << std::endl;
+  debugCout << std::endl;
 
   std::vector<std::string> functions = parser->getFunctions();
 
   GraphVisualizer *visualizer = new GraphVisualizer();
   // visualizer->visualizeGraph(funcCfgs[functions[1]]);
 
+  logTimeSinceLast("Parsing time: ", currTime);
+
   DeltaLockset *deltaLockset =
       new DeltaLockset(callGraph, parser, functionEraserSets);
   deltaLockset->updateLocksets(functions);
+
+  logTimeSinceLast("Phase 1 time: ", currTime);
 
   FunctionVariableLocksets *functionVariableLocksets =
       new FunctionVariableLocksets(db);
@@ -90,7 +111,9 @@ int main() {
       new CumulativeLocksets(callGraph, functionCumulativeLocksets);
 
   variableLocksets->updateLocksets();
+  logTimeSinceLast("Phase 2 time: ", currTime);
   cumulativeLocksets->updateLocksets();
+  logTimeSinceLast("Phase 3 time: ", currTime);
 
   functionEraserSets->markFunctionEraserSetsAsOld();
   functionVariableLocksets->markFunctionVariableLocksetsAsOld();
@@ -99,8 +122,31 @@ int main() {
   std::set<std::string> dataRaces =
       functionCumulativeLocksets->detectDataRaces();
 
-  std::cout << "Variables with data races:" << std::endl;
-  for (const std::string &dataRace : dataRaces) {
-    std::cout << dataRace << std::endl;
+  // std::cout << "Variables with data races:" << std::endl;
+  // for (const std::string &dataRace : dataRaces) {
+  //   std::cout << dataRace << std::endl;
+  // }
+
+  auto endTime = std::chrono::high_resolution_clock::now();
+  auto duration =
+      std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime)
+          .count();
+
+  std::cout << "Total time taken: " << duration << "ms" << std::endl;
+
+  std::ifstream statFile("/proc/self/stat");
+  std::string statLine;
+  std::getline(statFile, statLine);
+  std::istringstream iss(statLine);
+  std::string entry;
+  long long memUsage;
+  for (int i = 1; i <= 24; i++) {
+    std::getline(iss, entry, ' ');
+    if (i == 24) {
+      memUsage = stoi(entry);
+    }
   }
+  // std::cout << "Memory usage: " << (int)(4096 * memUsage / 1e6) << " MB"
+  //           << std::endl;
+  std::cout << std::endl;
 }

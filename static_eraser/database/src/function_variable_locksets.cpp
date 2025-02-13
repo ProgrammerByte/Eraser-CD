@@ -16,7 +16,7 @@ std::string FunctionVariableLocksets::getId(std::string funcName,
   std::string id = "";
 
   if (sqlite3_step(stmt) == SQLITE_ROW) {
-    id = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
+    id = db->getStringFromStatement(stmt, 0);
   }
   sqlite3_finalize(stmt);
 
@@ -30,7 +30,7 @@ std::string FunctionVariableLocksets::getId(std::string funcName,
             "testname = ?;";
     db->prepareStatement(stmt, query, params);
     if (sqlite3_step(stmt) == SQLITE_ROW) {
-      id = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
+      id = db->getStringFromStatement(stmt, 0);
     }
   }
   return id;
@@ -54,10 +54,8 @@ void FunctionVariableLocksets::extractFunctionLocksFromDb(
   std::vector<std::string> params = {funcName};
   db->prepareStatement(stmt, query, params);
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    std::string varName =
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
-    std::string type =
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2));
+    std::string varName = db->getStringFromStatement(stmt, 1);
+    std::string type = db->getStringFromStatement(stmt, 2);
     if (type == "lock") {
       dbLocks.insert(varName);
     } else {
@@ -115,11 +113,10 @@ FunctionInputs FunctionVariableLocksets::updateAndCheckCombinedInputs() {
   std::vector<std::string> testnames = {};
   std::vector<bool> recentlyChanged = {};
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    ids.push_back(reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0)));
-    testnames.push_back(
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1)));
-    recentlyChanged.push_back(db->retrieveBoolean(
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2))));
+    ids.push_back(db->getStringFromStatement(stmt, 0));
+    testnames.push_back(db->getStringFromStatement(stmt, 1));
+    recentlyChanged.push_back(
+        db->retrieveBoolean(db->getStringFromStatement(stmt, 2)));
   }
   sqlite3_finalize(stmt);
   functionInputs.reachableTests = testnames;
@@ -142,8 +139,7 @@ FunctionInputs FunctionVariableLocksets::updateAndCheckCombinedInputs() {
       params = {id};
       db->prepareStatement(stmt, query, params);
       while (sqlite3_step(stmt) == SQLITE_ROW) {
-        oldCombinedLocks.insert(
-            reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0)));
+        oldCombinedLocks.insert(db->getStringFromStatement(stmt, 0));
       }
       sqlite3_finalize(stmt);
     }
@@ -158,8 +154,7 @@ FunctionInputs FunctionVariableLocksets::updateAndCheckCombinedInputs() {
     params = {id};
     db->prepareStatement(stmt, query, params);
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-      std::string caller =
-          reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
+      std::string caller = db->getStringFromStatement(stmt, 0);
       if (callerLocksets.find(caller) == callerLocksets.end()) {
         callerLocksets.insert({caller, {}});
         callers.push_back(caller);
@@ -188,10 +183,8 @@ FunctionInputs FunctionVariableLocksets::updateAndCheckCombinedInputs() {
     params = {id};
     db->prepareStatement(stmt, query, params);
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-      std::string caller =
-          reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
-      std::string lock =
-          reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
+      std::string caller = db->getStringFromStatement(stmt, 0);
+      std::string lock = db->getStringFromStatement(stmt, 1);
       callerLocksets[caller].insert(lock);
     }
     sqlite3_finalize(stmt);
@@ -278,7 +271,7 @@ void FunctionVariableLocksets::addFuncCallLocksets(
     db->prepareStatement(stmt, query, params);
     std::string id;
     if (sqlite3_step(stmt) == SQLITE_ROW) {
-      id = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
+      id = db->getStringFromStatement(stmt, 0);
     }
 
     query = "INSERT OR IGNORE INTO function_variable_locksets_callers_locks "
@@ -326,8 +319,7 @@ VariableLocks FunctionVariableLocksets::getVariableLocks() {
   db->prepareStatement(stmt, query, params);
   VariableLocks variableLocks;
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    std::string varName =
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
+    std::string varName = db->getStringFromStatement(stmt, 0);
     if (variableLocks.find(varName) == variableLocks.end()) {
       variableLocks.insert({varName, {}});
     }
@@ -339,10 +331,8 @@ VariableLocks FunctionVariableLocksets::getVariableLocks() {
   params = {currId};
   db->prepareStatement(stmt, query, params);
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    std::string varName =
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
-    std::string lock =
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
+    std::string varName = db->getStringFromStatement(stmt, 0);
+    std::string lock = db->getStringFromStatement(stmt, 1);
     variableLocks[varName].insert(lock);
   }
   sqlite3_finalize(stmt);
@@ -379,8 +369,7 @@ std::set<std::string> FunctionVariableLocksets::getFunctionRecursiveUnlocks() {
   db->prepareStatement(stmt, query, params);
   std::set<std::string> unlocks;
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    std::string varName =
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
+    std::string varName = db->getStringFromStatement(stmt, 0);
     unlocks.insert(varName);
   }
   sqlite3_finalize(stmt);
@@ -411,9 +400,7 @@ std::vector<std::string> FunctionVariableLocksets::getFunctionsForTesting() {
 
   std::vector<std::string> functions = {};
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    std::string funcName = std::string(
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0)));
-    functions.push_back(funcName);
+    functions.push_back(db->getStringFromStatement(stmt, 0));
   }
   sqlite3_finalize(stmt);
   return functions;

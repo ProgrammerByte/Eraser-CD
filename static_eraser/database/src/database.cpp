@@ -308,4 +308,14 @@ std::string Database::createBoolean(bool value) {
 
 bool Database::retrieveBoolean(std::string value) { return value == "1"; }
 
+std::string Database::getStringFromStatement(sqlite3_stmt *stmt, int col) {
+  std::string result = "";
+  const char *text =
+      reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
+  if (text) {
+    result = text;
+  }
+  return result;
+}
+
 Database::~Database() { sqlite3_close(db); }

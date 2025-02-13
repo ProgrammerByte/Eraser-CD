@@ -108,8 +108,7 @@ void CallGraph::markNodes(std::vector<std::string> &startNodes,
 
     q.clear();
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-      std::string neighbor =
-          reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
+      std::string neighbor = db->getStringFromStatement(stmt, 0);
       q.push_back(neighbor);
     }
     sqlite3_finalize(stmt);
@@ -124,8 +123,7 @@ CallGraph::getNextNodes(std::vector<std::string> &order) {
   db->prepareStatement(stmt, query);
   std::vector<std::string> q = {};
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    std::string node =
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
+    std::string node = db->getStringFromStatement(stmt, 0);
     order.push_back(node);
     q.push_back(node);
   }
@@ -296,7 +294,7 @@ std::string CallGraph::getFilenameFromFuncname(std::string funcName) {
   db->prepareStatement(stmt, query, params);
   std::string result = "";
   if (sqlite3_step(stmt) == SQLITE_ROW) {
-    result = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
+    result = db->getStringFromStatement(stmt, 0);
   }
   sqlite3_finalize(stmt);
   return result;

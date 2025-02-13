@@ -39,8 +39,7 @@ std::set<std::string> FunctionCumulativeLocksets::getFunctionCumulativeAccesses(
 
   std::set<std::string> variableAccesses = {};
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    std::string varName = std::string(
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0)));
+    std::string varName = db->getStringFromStatement(stmt, 0);
     variableAccesses.insert(varName);
   }
   return variableAccesses;
@@ -56,8 +55,7 @@ TestVariableLocks FunctionCumulativeLocksets::getFunctionCumulativeLocksets(
   db->prepareStatement(stmt, query, params);
   VariableLocks defaultVariableLocks = {};
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    std::string varName = std::string(
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0)));
+    std::string varName = db->getStringFromStatement(stmt, 0);
     defaultVariableLocks.insert({varName, {}});
   }
 
@@ -70,10 +68,8 @@ TestVariableLocks FunctionCumulativeLocksets::getFunctionCumulativeLocksets(
   std::vector<std::string> ids = {};
   std::vector<std::string> testNames = {};
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    ids.push_back(std::string(
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0))));
-    std::string testName = std::string(
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1)));
+    ids.push_back(db->getStringFromStatement(stmt, 0));
+    std::string testName = db->getStringFromStatement(stmt, 1);
     testNames.push_back(testName);
     cumulativeLocksets.insert({testName, defaultVariableLocks});
   }
@@ -86,10 +82,8 @@ TestVariableLocks FunctionCumulativeLocksets::getFunctionCumulativeLocksets(
     params = {ids[i]};
     db->prepareStatement(stmt, query, params);
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-      std::string varName = std::string(
-          reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0)));
-      std::string lock = std::string(
-          reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1)));
+      std::string varName = db->getStringFromStatement(stmt, 0);
+      std::string lock = db->getStringFromStatement(stmt, 1);
       cumulativeLocksets[testNames[i]][varName].insert(lock);
     }
     sqlite3_finalize(stmt);
@@ -115,9 +109,7 @@ FunctionCumulativeLocksets::computeFunctionCumulativeAccesses(
   std::set<std::string> cumulativeAccesses = {};
   std::vector<std::string> callees = {};
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    std::string callee = std::string(
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0)));
-    callees.push_back(callee);
+    callees.push_back(db->getStringFromStatement(stmt, 0));
   }
   sqlite3_finalize(stmt);
 
@@ -127,9 +119,7 @@ FunctionCumulativeLocksets::computeFunctionCumulativeAccesses(
     params = {callee};
     db->prepareStatement(stmt, query, params);
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-      std::string varName = std::string(
-          reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0)));
-      cumulativeAccesses.insert(varName);
+      cumulativeAccesses.insert(db->getStringFromStatement(stmt, 0));
     }
     sqlite3_finalize(stmt);
   }
@@ -140,9 +130,7 @@ FunctionCumulativeLocksets::computeFunctionCumulativeAccesses(
   params = {funcName};
   db->prepareStatement(stmt, query, params);
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    std::string varName = std::string(
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0)));
-    cumulativeAccesses.insert(varName);
+    cumulativeAccesses.insert(db->getStringFromStatement(stmt, 0));
   }
   return cumulativeAccesses;
 }
@@ -156,10 +144,8 @@ TestVariableLocks FunctionCumulativeLocksets::computeFunctionCumulativeLocksets(
   db->prepareStatement(stmt, query, params);
   TestVariableLocks testVariableLocks = {};
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    std::string id = std::string(
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0)));
-    std::string testName = std::string(
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1)));
+    std::string id = db->getStringFromStatement(stmt, 0);
+    std::string testName = db->getStringFromStatement(stmt, 1);
 
     testVariableLocks.insert(
         {testName, functionVariableLocksets->getVariableLocks(funcName, id)});
@@ -169,8 +155,7 @@ TestVariableLocks FunctionCumulativeLocksets::computeFunctionCumulativeLocksets(
   params = {funcName};
   db->prepareStatement(stmt, query, params);
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    std::string callee = std::string(
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0)));
+    std::string callee = db->getStringFromStatement(stmt, 0);
     testVariableLocks *= getFunctionCumulativeLocksets(callee);
   }
   return testVariableLocks;
@@ -221,7 +206,7 @@ void FunctionCumulativeLocksets::insertFunctionCumulativeData(
     db->prepareStatement(stmt, query, params);
     std::string id;
     if (sqlite3_step(stmt) == SQLITE_ROW) {
-      id = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
+      id = db->getStringFromStatement(stmt, 0);
     }
     sqlite3_finalize(stmt);
 
@@ -267,9 +252,7 @@ std::vector<std::string> FunctionCumulativeLocksets::getFunctionsForTesting() {
   db->prepareStatement(stmt, query);
   std::vector<std::string> functions = {};
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    std::string funcName = std::string(
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0)));
-    functions.push_back(funcName);
+    functions.push_back(db->getStringFromStatement(stmt, 0));
   }
   return functions;
 }
@@ -288,8 +271,7 @@ std::set<std::string> FunctionCumulativeLocksets::detectDataRaces() {
   std::vector<std::string> params = {funcName};
   db->prepareStatement(stmt, query, params);
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    std::string varName = std::string(
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0)));
+    std::string varName = db->getStringFromStatement(stmt, 0);
     if (mainLocksets.find(varName) == mainLocksets.end() ||
         mainLocksets[varName].empty()) {
       dataRaces.insert(varName);

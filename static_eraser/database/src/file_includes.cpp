@@ -31,8 +31,7 @@ std::set<std::string> FileIncludes::getChildren(std::string fileName) {
 
   std::set<std::string> includes;
   while (sqlite3_step(stmt) == SQLITE_ROW) {
-    includes.insert(std::string(
-        reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0))));
+    includes.insert(db->getStringFromStatement(stmt, 0));
   }
 
   sqlite3_finalize(stmt);

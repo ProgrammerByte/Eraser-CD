@@ -1,4 +1,5 @@
 #include "cumulative_locksets.h"
+#include "debug_tools.h"
 
 CumulativeLocksets::CumulativeLocksets(
     CallGraph *callGraph,
@@ -15,10 +16,10 @@ void CumulativeLocksets::updateLocksets() {
 
   for (const std::string &funcName : ordering) {
     if (!functionCumulativeLocksets->shouldVisitNode(funcName)) {
-      std::cout << "CL SKIPPING " << funcName << std::endl;
+      debugCout << "CL SKIPPING " << funcName << std::endl;
       continue;
     }
-    std::cout << "CL Looking at " << funcName << std::endl;
+    debugCout << "CL Looking at " << funcName << std::endl;
     functionCumulativeLocksets->updateFunctionCumulativeLocksets(funcName);
   }
 }
