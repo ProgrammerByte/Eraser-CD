@@ -43,5 +43,4 @@ private:
   std::vector<StartwhileNode *> startwhileStack;
   std::vector<std::vector<BreakNode *>> breakListStack;
   std::vector<std::vector<ContinueNode *>> continueListStack;
-  std::vector<GraphNode *> scopeStack;
 };

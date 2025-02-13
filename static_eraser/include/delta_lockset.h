@@ -34,16 +34,16 @@ private:
   CallGraph *callGraph;
   Parser *parser;
   FunctionEraserSets *functionEraserSets;
-  std::set<std::string> functionDirectReads;
-  std::set<std::string> functionDirectWrites;
+  std::set<std::string> functionDirectReads = {};
+  std::set<std::string> functionDirectWrites = {};
 
   std::priority_queue<GraphNode *, std::vector<GraphNode *>, CompareGraphNode>
-      forwardQueue;
+      forwardQueue = {};
 
-  std::vector<GraphNode *> backwardQueue;
+  std::vector<GraphNode *> backwardQueue = {};
 
   std::string currFunc;
-  std::unordered_map<GraphNode *, EraserSets> nodeSets;
+  std::unordered_map<GraphNode *, EraserSets> nodeSets = {};
 
   bool variableRead(std::string varName, EraserSets &sets);
   bool variableWrite(std::string varName, EraserSets &sets);

@@ -21,13 +21,7 @@ public:
   std::string getPrintableNameWithId();
 
   int id = 0;
-
-  // TODO - I BET ALL THIS STUFF BELOW HERE CAN JUST GO!!!
   virtual std::vector<GraphNode *> getNextNodes() = 0;
-
-  // TODO - IN FACT MAYBE SPLIT GOTO INTO UPPER AND LOWER S.T UPPER = ONES WE
-  // VISIT FROM BEHIND HENCE NEED ALL TO CONTINUE WHEREAS FROM IN FRONT ONLY
-  // NEED ONE TO CONTINUE
   std::string getNodeType();
 };
 

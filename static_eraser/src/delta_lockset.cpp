@@ -314,11 +314,8 @@ void DeltaLockset::addNodeToQueue(GraphNode *startNode, GraphNode *nextNode) {
 }
 
 void DeltaLockset::handleFunction(GraphNode *startNode) {
-  functionDirectReads.clear();
-  functionDirectWrites.clear();
   functionEraserSets->startNewFunction(currFunc);
   forwardQueue.push(startNode);
-  nodeSets = {};
   nodeSets.insert({startNode, EraserSets::defaultValue});
   nodeSets[startNode].eraserIgnoreOn = false;
   recursive = false;
@@ -378,6 +375,10 @@ void DeltaLockset::handleFunction(GraphNode *startNode) {
   functionEraserSets->saveFunctionDirectVariableAccesses(functionDirectReads,
                                                          functionDirectWrites);
   functionEraserSets->saveCurrEraserSets();
+
+  functionDirectReads.clear();
+  functionDirectWrites.clear();
+  nodeSets.clear();
 }
 
 // TODO - startNode unlocks should be used by static eraser to remove from

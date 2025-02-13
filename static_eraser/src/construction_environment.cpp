@@ -10,7 +10,6 @@ StartNode *ConstructionEnvironment::startNewTree(std::string funcName) {
   startwhileStack = {};
   breakListStack = {};
   continueListStack = {};
-  scopeStack = {};
   return (StartNode *)currNode;
 };
 
@@ -37,7 +36,6 @@ void ConstructionEnvironment::callOnAdd(GraphNode *node) { onAdd(node); }
 
 void ConstructionEnvironment::onAdd(IfNode *node) {
   ifStack.push_back(node);
-  scopeStack.push_back(node);
   endifListStack.push_back(std::vector<BasicNode *>(0));
   callOnAdd(node);
 }
@@ -70,7 +68,6 @@ void ConstructionEnvironment::onAdd(EndifNode *node) {
   }
 
   ifStack.pop_back();
-  scopeStack.pop_back(); // TODO - SCOPE PROBABLY NOT NEEDED
   endifListStack.pop_back();
 
   if (currNode == nullptr) {
@@ -89,7 +86,6 @@ void ConstructionEnvironment::onAdd(StartwhileNode *node) {
     continueListStack.push_back(std::vector<ContinueNode *>(0));
   }
   if (node->isDoWhile) {
-    scopeStack.push_back(node);
     breakListStack.push_back(std::vector<BreakNode *>(0));
   }
   callOnAdd(node);
@@ -101,7 +97,6 @@ void ConstructionEnvironment::onAdd(WhileNode *node) {
   if (node->isDoWhile) {
     node->whileNode = startwhileStack.back();
   } else {
-    scopeStack.push_back(node);
     breakListStack.push_back(std::vector<BreakNode *>(0));
   }
 }
@@ -114,7 +109,6 @@ void ConstructionEnvironment::onAdd(EndwhileNode *node) {
 
   whileStack.pop_back();
   breakListStack.pop_back();
-  scopeStack.pop_back();
   startwhileStack.pop_back();
 
   for (int i = 0; i < breakNodes.size(); i++) {

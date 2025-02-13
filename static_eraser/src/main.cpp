@@ -34,12 +34,12 @@ int main() {
   auto currTime = startTime;
 
   bool initialCommit = false;
-  Database *db = new Database(initialCommit);
-  FunctionEraserSets *functionEraserSets = new FunctionEraserSets(db);
-  CallGraph *callGraph = new CallGraph(db);
-  FileIncludes *fileIncludes = new FileIncludes(db);
-  DiffAnalysis *diffAnalysis = new DiffAnalysis(fileIncludes);
-  Parser *parser = new Parser(callGraph, fileIncludes);
+  Database db(initialCommit);
+  FunctionEraserSets functionEraserSets(&db);
+  CallGraph callGraph(&db);
+  FileIncludes fileIncludes(&db);
+  DiffAnalysis diffAnalysis(&fileIncludes);
+  Parser parser(&callGraph, &fileIncludes);
 
   std::string repoPath = "~/dissertation/Eraser-CD";
   std::set<std::string> changedFiles;
@@ -56,12 +56,12 @@ int main() {
     changedFiles = {"test_files/Splash-4/altered/fft.c"};
 
     std::string repoPath = "test_files/Splash-4/altered/barnes";
-    changedFiles = diffAnalysis->getAllFiles(repoPath);
+    changedFiles = diffAnalysis.getAllFiles(repoPath);
   } else {
     std::string commitHash1 = "300e894461d8a7cf21a4d2e4b49281e4f940a472";
     std::string commitHash2 = "4127b6c626f3fe9cb311b59c3b14ede9222c420b";
     changedFiles =
-        diffAnalysis->getChangedFiles(repoPath, commitHash1, commitHash2);
+        diffAnalysis.getChangedFiles(repoPath, commitHash1, commitHash2);
 
     changedFiles = {"test_files/largest_check_multi_file/main.c",
                     "test_files/largest_check_multi_file/recur.c",
@@ -80,52 +80,50 @@ int main() {
   debugCout << "Parsing changed files:" << std::endl;
   for (const auto &file : changedFiles) {
     debugCout << file << std::endl;
-    callGraph->markNodesAsStale(file);
-    parser->parseFile(file.c_str(), true);
+    callGraph.markNodesAsStale(file);
+    parser.parseFile(file.c_str(), true);
   }
   debugCout << std::endl;
 
-  std::vector<std::string> functions = parser->getFunctions();
+  std::vector<std::string> functions = parser.getFunctions();
 
-  GraphVisualizer *visualizer = new GraphVisualizer();
+  GraphVisualizer visualizer;
   // visualizer->visualizeGraph(funcCfgs[functions[1]]);
 
   logTimeSinceLast("Parsing time: ", currTime);
 
-  DeltaLockset *deltaLockset =
-      new DeltaLockset(callGraph, parser, functionEraserSets);
-  deltaLockset->updateLocksets(functions);
+  DeltaLockset deltaLockset(&callGraph, &parser, &functionEraserSets);
+  deltaLockset.updateLocksets(functions);
 
   logTimeSinceLast("Phase 1 time: ", currTime);
 
-  FunctionVariableLocksets *functionVariableLocksets =
-      new FunctionVariableLocksets(db);
+  FunctionVariableLocksets functionVariableLocksets(&db);
 
-  FunctionCumulativeLocksets *functionCumulativeLocksets =
-      new FunctionCumulativeLocksets(db, functionVariableLocksets);
+  FunctionCumulativeLocksets functionCumulativeLocksets(
+      &db, &functionVariableLocksets);
 
-  VariableLocksets *variableLocksets =
-      new VariableLocksets(callGraph, parser, functionVariableLocksets);
+  VariableLocksets variableLocksets(&callGraph, &parser,
+                                    &functionVariableLocksets);
 
-  CumulativeLocksets *cumulativeLocksets =
-      new CumulativeLocksets(callGraph, functionCumulativeLocksets);
+  CumulativeLocksets cumulativeLocksets(&callGraph,
+                                        &functionCumulativeLocksets);
 
-  variableLocksets->updateLocksets();
+  variableLocksets.updateLocksets();
   logTimeSinceLast("Phase 2 time: ", currTime);
-  cumulativeLocksets->updateLocksets();
+  cumulativeLocksets.updateLocksets();
   logTimeSinceLast("Phase 3 time: ", currTime);
 
-  functionEraserSets->markFunctionEraserSetsAsOld();
-  functionVariableLocksets->markFunctionVariableLocksetsAsOld();
-  callGraph->deleteStaleNodes();
+  functionEraserSets.markFunctionEraserSetsAsOld();
+  functionVariableLocksets.markFunctionVariableLocksetsAsOld();
+  callGraph.deleteStaleNodes();
 
   std::set<std::string> dataRaces =
-      functionCumulativeLocksets->detectDataRaces();
+      functionCumulativeLocksets.detectDataRaces();
 
-  // std::cout << "Variables with data races:" << std::endl;
-  // for (const std::string &dataRace : dataRaces) {
-  //   std::cout << dataRace << std::endl;
-  // }
+  std::cout << "Variables with data races:" << std::endl;
+  for (const std::string &dataRace : dataRaces) {
+    std::cout << dataRace << std::endl;
+  }
 
   auto endTime = std::chrono::high_resolution_clock::now();
   auto duration =
@@ -146,7 +144,7 @@ int main() {
       memUsage = stoi(entry);
     }
   }
-  // std::cout << "Memory usage: " << (int)(4096 * memUsage / 1e6) << " MB"
-  //           << std::endl;
+  std::cout << "Memory usage: " << (int)(4096 * memUsage / 1e6) << " MB"
+            << std::endl;
   std::cout << std::endl;
 }

@@ -172,11 +172,8 @@ void VariableLocksets::handleFunction(GraphNode *startNode,
   }
   functionVariableLocksets->addFuncCallLocksets(funcCallLocksets);
   functionVariableLocksets->addVariableLocksets(variableLocksets);
-  // functionVariableLocksets->saveCurrlockss();
 }
 
-// TODO - startNode unlocks should be used by static eraser to remove from
-// current lockset before calling (recursive) functions
 void VariableLocksets::updateLocksets() {
 
   std::vector<std::string> functions =

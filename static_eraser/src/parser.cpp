@@ -536,3 +536,30 @@ void Parser::parseFile(const char *fileName, bool fileChanged) {
 }
 
 std::vector<std::string> Parser::getFunctions() { return functions; }
+
+void deallocateCFG(StartNode *node) {
+  std::set<GraphNode *> nodes = {node};
+  std::vector<GraphNode *> stack = {node};
+  while (stack.size() > 0) {
+    GraphNode *currNode = stack.back();
+    stack.pop_back();
+    std::vector<GraphNode *> nextNodes = currNode->getNextNodes();
+    for (int i = 0; i < nextNodes.size(); i++) {
+      GraphNode *nextNode = nextNodes[i];
+      if (nodes.find(nextNode) != nodes.end()) {
+        nodes.insert(nextNode);
+        stack.push_back(nextNode);
+      }
+    }
+  }
+  for (auto it = nodes.begin(); it != nodes.end(); ++it) {
+    delete *it;
+  }
+}
+
+Parser::~Parser() {
+  delete environment;
+  for (auto it = funcCfgs.begin(); it != funcCfgs.end(); ++it) {
+    deallocateCFG(it->second);
+  }
+}
