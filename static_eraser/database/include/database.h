@@ -22,6 +22,7 @@ public:
   std::string createTupleList(std::vector<std::string> &nodes);
   std::string createBoolean(bool value);
   bool retrieveBoolean(std::string value);
+  std::string getStringFromStatement(sqlite3_stmt *stmt, int col);
 
 private:
   std::string dbName = "eraser.db";
