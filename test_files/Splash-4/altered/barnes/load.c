@@ -39,7 +39,7 @@ extern pthread_mutex_t __intern__;
 
 extern _Atomic unsigned __count__;
 extern _Atomic volatile int __sense__;
-extern __thread int __local_sense__;
+extern _Atomic __thread int __local_sense__;
 
 #define global extern
 

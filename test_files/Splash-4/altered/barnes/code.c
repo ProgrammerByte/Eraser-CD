@@ -87,12 +87,14 @@ Command line options:
 pthread_t __tid__[__MAX_THREADS__];
 unsigned __threads__ = 0;
 pthread_mutex_t __intern__;
-unsigned __count__;
+pthread_mutex_t __forcecalctime_lock__;
+_Atomic unsigned __count__;
 volatile int __sense__ = 1;
-__thread int __local_sense__ = 1;
+_Atomic __thread int __local_sense__ = 1;
 
 #define global /* nada */
 
+#include "eraser.h"
 #include "stdinc.h"
 
 string defv[] = {
@@ -273,6 +275,7 @@ int main(int argc, string argv[]) {
     }
   }
 
+  EraserIgnoreOn();
   initparam(defv);
   startrun();
   initoutput();
@@ -283,6 +286,7 @@ int main(int argc, string argv[]) {
   Global_treebuildtime = 0;
   Global_forcecalctime = 0;
   Global_current_id = 0;
+  EraserIgnoreOff();
 
   {
     struct timeval FullTime;
@@ -328,6 +332,7 @@ int main(int argc, string argv[]) {
   printf("COMPUTEEND    = %12lu\n", Global_computeend);
   printf("COMPUTETIME   = %12lu\n", Global_computeend - Global_computestart);
   printf("TRACKTIME     = %12lu\n", Global_tracktime);
+  pthread_mutex_lock(&__forcecalctime_lock__);
   printf("PARTITIONTIME = %12lu\t%5.2f\n", Global_partitiontime,
          ((float)Global_partitiontime) / Global_tracktime);
   printf("TREEBUILDTIME = %12lu\t%5.2f\n", Global_treebuildtime,
@@ -340,6 +345,7 @@ int main(int argc, string argv[]) {
          ((float)(Global_tracktime - Global_partitiontime -
                   Global_treebuildtime - Global_forcecalctime)) /
              Global_tracktime);
+  pthread_mutex_unlock(&__forcecalctime_lock__);
   { exit(0); };
 }
 
@@ -753,6 +759,7 @@ void stepsystem(long ProcessId) {
   maketree(ProcessId);
 
   if ((ProcessId == 0) && (Local[ProcessId].nstep >= 2)) {
+    EraserIgnoreOn();
     {
       struct timeval FullTime;
       gettimeofday(&FullTime, NULL);
@@ -760,6 +767,7 @@ void stepsystem(long ProcessId) {
           (unsigned long)(FullTime.tv_usec + FullTime.tv_sec * 1000000);
     };
     Global_treebuildtime += treebuildend - treebuildstart;
+    EraserIgnoreOff();
   }
 
   Housekeep(ProcessId);
@@ -783,6 +791,7 @@ void stepsystem(long ProcessId) {
 
   /*     B*RRIER(Global_Barcom,NPROC); */
   if ((ProcessId == 0) && (Local[ProcessId].nstep >= 2)) {
+    EraserIgnoreOn();
     {
       struct timeval FullTime;
       gettimeofday(&FullTime, NULL);
@@ -790,20 +799,24 @@ void stepsystem(long ProcessId) {
           (unsigned long)(FullTime.tv_usec + FullTime.tv_sec * 1000000);
     };
     Global_partitiontime += partitionend - partitionstart;
+    EraserIgnoreOff();
   }
 
   if ((ProcessId == 0) && (Local[ProcessId].nstep >= 2)) {
+    EraserIgnoreOn();
     {
       struct timeval FullTime;
       gettimeofday(&FullTime, NULL);
       (forcecalcstart) =
           (unsigned long)(FullTime.tv_usec + FullTime.tv_sec * 1000000);
     };
+    EraserIgnoreOff();
   }
 
   ComputeForces(ProcessId);
 
   if ((ProcessId == 0) && (Local[ProcessId].nstep >= 2)) {
+    EraserIgnoreOn();
     {
       struct timeval FullTime;
       gettimeofday(&FullTime, NULL);
@@ -811,6 +824,7 @@ void stepsystem(long ProcessId) {
           (unsigned long)(FullTime.tv_usec + FullTime.tv_sec * 1000000);
     };
     Global_forcecalctime += forcecalcend - forcecalcstart;
+    EraserIgnoreOff();
   }
 
   /* advance my bodies */
@@ -882,6 +896,7 @@ void stepsystem(long ProcessId) {
     };
   };
   if ((ProcessId == 0) && (Local[ProcessId].nstep >= 2)) {
+    EraserIgnoreOn();
     {
       struct timeval FullTime;
       gettimeofday(&FullTime, NULL);
@@ -889,8 +904,10 @@ void stepsystem(long ProcessId) {
           (unsigned long)(FullTime.tv_usec + FullTime.tv_sec * 1000000);
     };
     Global_tracktime += trackend - trackstart;
+    EraserIgnoreOff();
   }
   if (ProcessId == 0) {
+    EraserIgnoreOn();
     Global_rsize = 0;
     SUBV(Global_max, Global_max, Global_min);
     for (i = 0; i < NDIM; i++) {
@@ -902,6 +919,7 @@ void stepsystem(long ProcessId) {
     Global_rsize = 1.00002 * Global_rsize;
     SETVS(Global_min, 1E99);
     SETVS(Global_max, -1E99);
+    EraserIgnoreOff();
   }
   Local[ProcessId].nstep++;
   Local[ProcessId].tnow = Local[ProcessId].tnow + dtime;
