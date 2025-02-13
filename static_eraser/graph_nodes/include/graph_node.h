@@ -9,6 +9,7 @@ public:
   int visits = 0;
   int priorNodes = 1;
   int priorNodesVisited = 0;
+  bool eraserIgnoreOn = true;
 
   explicit GraphNode(NodeType type);
   virtual ~GraphNode() = default;

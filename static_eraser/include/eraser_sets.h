@@ -121,6 +121,7 @@ struct EraserSets {
   // threads
   std::set<std::string> finishedThreads;
   ActiveThreads activeThreads;
+  bool eraserIgnoreOn;
 
   bool locksEqual(const EraserSets &other) const {
     return locks == other.locks && unlocks == other.unlocks;
@@ -140,7 +141,8 @@ struct EraserSets {
   }
 
   bool operator==(const EraserSets &other) const {
-    return locksEqual(other) && varsEqual(other);
+    return locksEqual(other) && varsEqual(other) &&
+           eraserIgnoreOn == other.eraserIgnoreOn;
   }
 
   bool operator!=(const EraserSets &other) const { return !(*this == other); }
@@ -148,5 +150,5 @@ struct EraserSets {
   static const EraserSets defaultValue;
 };
 
-const inline EraserSets EraserSets::defaultValue = {{}, {}, {}, {}, {}, {},
-                                                    {}, {}, {}, {}, {}, {}};
+const inline EraserSets EraserSets::defaultValue = {{}, {}, {}, {}, {}, {},  {},
+                                                    {}, {}, {}, {}, {}, true};

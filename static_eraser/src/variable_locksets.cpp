@@ -46,7 +46,7 @@ bool VariableLocksets::handleNode(ThreadCreateNode *node,
                                   std::set<std::string> &locks) {
   std::string varName = node->varName;
   std::string functionName = node->functionName;
-  if (node->global && varName != "") {
+  if (node->global && varName != "" && !node->eraserIgnoreOn) {
     variableWrite(varName, locks);
   }
   if (funcCallLocksets.find(functionName) == funcCallLocksets.end()) {
@@ -60,7 +60,7 @@ bool VariableLocksets::handleNode(ThreadCreateNode *node,
 bool VariableLocksets::handleNode(ThreadJoinNode *node,
                                   std::set<std::string> &locks) {
   std::string varName = node->varName;
-  if (node->global && varName != "") {
+  if (node->global && varName != "" && !node->eraserIgnoreOn) {
     variableRead(varName, locks);
   }
   return true;
@@ -80,11 +80,17 @@ bool VariableLocksets::handleNode(UnlockNode *node,
 
 bool VariableLocksets::handleNode(ReadNode *node,
                                   std::set<std::string> &locks) {
+  if (node->eraserIgnoreOn) {
+    return true;
+  }
   return variableRead(node->varName, locks);
 };
 
 bool VariableLocksets::handleNode(WriteNode *node,
                                   std::set<std::string> &locks) {
+  if (node->eraserIgnoreOn) {
+    return true;
+  }
   return variableWrite(node->varName, locks);
 };
 

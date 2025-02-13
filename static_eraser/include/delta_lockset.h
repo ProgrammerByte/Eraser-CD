@@ -49,7 +49,6 @@ private:
   bool variableWrite(std::string varName, EraserSets &sets);
   bool recursiveFunctionCall(std::string functionName, EraserSets &sets,
                              bool fromThread);
-  void sharedVariableAccessed(std::string varName, EraserSets &sets);
 
   void threadFinished(std::string varName, EraserSets &sets);
 
@@ -61,6 +60,8 @@ private:
   bool handleNode(ReadNode *node, EraserSets &sets);
   bool handleNode(WriteNode *node, EraserSets &sets);
   bool handleNode(ReturnNode *node, EraserSets &sets);
+  bool handleNode(EraserIgnoreOnNode *node, EraserSets &sets);
+  bool handleNode(EraserIgnoreOffNode *node, EraserSets &sets);
   bool handleNode(GraphNode *node, EraserSets &sets);
 
   void addNodeToQueue(GraphNode *startNode, GraphNode *nextNode);

@@ -232,6 +232,10 @@ void handleFunctionCall(CXCursor cursor, std::vector<GraphNode *> *nodesToAdd) {
         environment->onAdd(new UnlockNode(varName));
       }
     }
+  } else if (funcName == "EraserIgnoreOn") {
+    environment->onAdd(new EraserIgnoreOnNode());
+  } else if (funcName == "EraserIgnoreOff") {
+    environment->onAdd(new EraserIgnoreOffNode());
   } else {
     funcName = getFuncName(cursor, funcName);
     (*nodesToAdd).push_back(new FunctionCallNode(funcName));

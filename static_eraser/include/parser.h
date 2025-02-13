@@ -5,6 +5,8 @@
 #include "continue_node.h"
 #include "endif_node.h"
 #include "endwhile_node.h"
+#include "eraser_ignore_off_node.h"
+#include "eraser_ignore_on_node.h"
 #include "file_includes.h"
 #include "function_call_node.h"
 #include "if_node.h"

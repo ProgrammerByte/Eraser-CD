@@ -29,6 +29,7 @@ void FunctionEraserSets::combineSets(EraserSets &s1, EraserSets &s2) {
   s1.queuedWrites.removeVars(s1.sharedModified);
   s1.activeThreads += s2.activeThreads;
   s1.finishedThreads *= s2.finishedThreads;
+  s1.eraserIgnoreOn &= s2.eraserIgnoreOn;
 }
 
 void FunctionEraserSets::combineSetsForRecursiveThreads(EraserSets &s1,
