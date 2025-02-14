@@ -6,8 +6,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # the following lines are for debugging with gdb
 # set(CMAKE_BUILD_TYPE Debug)
-# set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DDEBUG")
-# set(CMAKE_C_FLAGS_DEBUG "-g -O0 -DDEBUG")
+# set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DDEBUG -fno-omit-frame-pointer")
+# set(CMAKE_C_FLAGS_DEBUG "-g -O0 -DDEBUG -fno-omit-frame-pointer")
 
 set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")

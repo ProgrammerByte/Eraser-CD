@@ -285,6 +285,12 @@ Database::Database(bool initialCommit) {
   }
 
   sqlite3_exec(db, "PRAGMA foreign_keys = ON;", nullptr, nullptr, nullptr);
+  // sqlite3_exec(db, "PRAGMA cache_size = -100000;", nullptr, nullptr,
+  // nullptr); sqlite3_exec(db, "PRAGMA mmap_size = 268435456;", nullptr,
+  // nullptr, nullptr); sqlite3_exec(db, "PRAGMA synchronous = NORMAL;",
+  // nullptr, nullptr, nullptr);
+  // sqlite3_exec(db, "PRAGMA journal_mode = WAL;", nullptr, nullptr, nullptr);
+  sqlite3_exec(db, "PRAGMA journal_mode = OFF;", nullptr, nullptr, nullptr);
 }
 
 std::string Database::createTupleList(std::vector<std::string> &nodes) {
