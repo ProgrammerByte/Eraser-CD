@@ -77,7 +77,10 @@ unsigned __threads__ = 0;
 pthread_mutex_t __intern__;
 _Atomic unsigned __count__;
 _Atomic volatile int __sense__ = 1;
-__thread int __local_sense__ = 1;
+_Atomic __thread int __local_sense__ = 1;
+
+void EraserIgnoreOn() {}
+void EraserIgnoreOff() {}
 
 #define SWAP_VALS(a, b)                                                        \
   {                                                                            \
@@ -96,7 +99,7 @@ unsigned long Global_starttime;
 unsigned long Global_finishtime;
 unsigned long Global_initdonetime;
 
-int is_output = 1;
+_Atomic int is_output = 1;
 long P = DEFAULT_P;
 long M = DEFAULT_M;
 long N;         /* N = 2^M                                */
@@ -170,6 +173,8 @@ int main(int argc, char *argv[]) {
     (start) = (unsigned long)(FullTime.tv_usec + FullTime.tv_sec * 1000000);
   };
 
+  // single-threaded code
+  EraserIgnoreOn();
   while ((c = getopt(argc, argv, "p:m:n:l:stoh")) != -1) {
     if (c == 'p') {
       P = atoi(optarg);
@@ -394,7 +399,7 @@ int main(int argc, char *argv[]) {
 
   /* fire off P processes */
 
-  ;
+  EraserIgnoreOff();
 
   {
     long i, Error;
@@ -601,6 +606,8 @@ void SlaveStart() {
   }
 
   if ((MyNum == 0) || (dostats)) {
+    // since MyNum is different between threads
+    EraserIgnoreOn();
     {
       struct timeval FullTime;
       gettimeofday(&FullTime, NULL);
@@ -608,10 +615,14 @@ void SlaveStart() {
     };
     Global_transtimes[MyNum] = l_transtime;
     Global_totaltimes[MyNum] = finish - initdone;
+    EraserIgnoreOff();
   }
   if (MyNum == 0) {
+    // will only run on one thread
+    EraserIgnoreOn();
     Global_finishtime = finish;
     Global_initdonetime = initdone;
+    EraserIgnoreOff();
   }
 }
 
@@ -1050,9 +1061,9 @@ void FFT1DOnce(long direction, long M, long N, double *u, double *x) {
       }
     }
   }
-  if (is_output == 1) {
+  int expected = 1;
+  if (atomic_compare_exchange_weak(&is_output, &expected, 0)) {
     printf("FFt1DOnce: iter_num = %lu\n", iter_num);
-    is_output = 0;
   }
 }
 
