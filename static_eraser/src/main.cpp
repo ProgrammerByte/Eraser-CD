@@ -33,7 +33,7 @@ int main() {
   auto startTime = std::chrono::high_resolution_clock::now();
   auto currTime = startTime;
 
-  bool initialCommit = false;
+  bool initialCommit = true;
   Database db(initialCommit);
   FunctionEraserSets functionEraserSets(&db);
   CallGraph callGraph(&db);
@@ -41,7 +41,9 @@ int main() {
   DiffAnalysis diffAnalysis(&fileIncludes);
   Parser parser(&callGraph, &fileIncludes);
 
-  std::string repoPath = "~/dissertation/Eraser-CD";
+  // std::string repoPath = "~/dissertation/Eraser-CD";
+  std::string repoPath = "test_files/Splash-3/"
+                         "d5733ce4f3859adc7af42b1a9833923f8558ea85";
   std::set<std::string> changedFiles;
   if (initialCommit) {
     // changedFiles = {"test_files/single_files/largest_check.c"};
@@ -55,8 +57,12 @@ int main() {
     // changedFiles = {"test_files/test.c"};
     changedFiles = {"test_files/Splash-4/altered/fft.c"};
 
-    std::string repoPath = "test_files/Splash-4/altered/barnes";
+    // std::string repoPath = "test_files/Splash-4/altered/barnes";
+    // std::string repoPath = "test_files/Splash-4/altered/cholesky";
+    // std::string repoPath =
+    //     "test_files/Splash-4/altered/ocean-non_contiguous_partitions";
     changedFiles = diffAnalysis.getAllFiles(repoPath);
+    // changedFiles = {repoPath + "/barnes/stdinc_pre.h"};
   } else {
     std::string commitHash1 = "300e894461d8a7cf21a4d2e4b49281e4f940a472";
     std::string commitHash2 = "4127b6c626f3fe9cb311b59c3b14ede9222c420b";
@@ -73,10 +79,21 @@ int main() {
     // changedFiles = {"test_files/largest_check_multi_file/largest_check.c"};
 
     changedFiles = {"test_files/Splash-4/altered/barnes/code.c"};
+    // changedFiles = {"test_files/Splash-4/altered/fft.c"};
+    // changedFiles = {};
     // changedFiles +=
     //     fileIncludes->getChildren("test_files/Splash-4/altered/barnes/code.h");
+    changedFiles = {
+        "test_files/Splash-4/altered/ocean-non_contiguous_partitions/main.c"};
+    // changedFiles = {
+    //     "test_files/Splash-4/altered/ocean-non_contiguous_partitions/main.c",
+    //     "test_files/Splash-4/altered/ocean-non_contiguous_partitions/slave1.c",
+    //     "test_files/Splash-4/altered/ocean-non_contiguous_partitions/slave2.c"};
+
+    // changedFiles = {"test_files/Splash-4/altered/cholesky/solve.c"};
   }
 
+  // changedFiles = {"test_files/Splash-4/altered/cholesky/amal.c"};
   debugCout << "Parsing changed files:" << std::endl;
   for (const auto &file : changedFiles) {
     debugCout << file << std::endl;
@@ -88,7 +105,7 @@ int main() {
   std::vector<std::string> functions = parser.getFunctions();
 
   GraphVisualizer visualizer;
-  // visualizer->visualizeGraph(funcCfgs[functions[1]]);
+  // visualizer.visualizeGraph(funcCfgs["ConsiderMerge"]);
 
   logTimeSinceLast("Parsing time: ", currTime);
 
