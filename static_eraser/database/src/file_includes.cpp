@@ -13,8 +13,8 @@ void FileIncludes::clearIncludes(std::string fileName) {
 
 void FileIncludes::addInclude(std::string fileName, std::string includedFile) {
   sqlite3_stmt *stmt;
-  std::string query =
-      "INSERT INTO file_includes (filename, included_file) VALUES (?, ?);";
+  std::string query = "INSERT OR IGNORE INTO file_includes "
+                      "(filename, included_file) VALUES (?, ?);";
 
   std::vector<std::string> params = {fileName, includedFile};
   db->prepareStatement(stmt, query, params);
