@@ -43,7 +43,7 @@ int main() {
 
   // std::string repoPath = "~/dissertation/Eraser-CD";
   std::string repoPath = "test_files/Splash-3/"
-                         "d5733ce4f3859adc7af42b1a9833923f8558ea85";
+                         "6d2b0ca8626e79481f3131ce0adf7a29fc242016";
   std::set<std::string> changedFiles;
   if (initialCommit) {
     // changedFiles = {"test_files/single_files/largest_check.c"};
@@ -62,7 +62,6 @@ int main() {
     // std::string repoPath =
     //     "test_files/Splash-4/altered/ocean-non_contiguous_partitions";
     changedFiles = diffAnalysis.getAllFiles(repoPath);
-    // changedFiles = {repoPath + "/barnes/stdinc_pre.h"};
   } else {
     std::string commitHash1 = "300e894461d8a7cf21a4d2e4b49281e4f940a472";
     std::string commitHash2 = "4127b6c626f3fe9cb311b59c3b14ede9222c420b";
@@ -91,6 +90,34 @@ int main() {
     //     "test_files/Splash-4/altered/ocean-non_contiguous_partitions/slave2.c"};
 
     // changedFiles = {"test_files/Splash-4/altered/cholesky/solve.c"};
+
+    // barnes testing Splash-3
+
+    // second commit:
+    // changedFiles = {
+    //     repoPath + "/barnes/code.c",      repoPath + "/barnes/code.h",
+    //     repoPath + "/barnes/defs.h",      repoPath + "/barnes/getparam.c",
+    //     repoPath + "/barnes/grav.c",      repoPath + "/barnes/load.c",
+    //     repoPath + "/barnes/stdinc_pre.h"};
+
+    // third commit:
+    // changedFiles = {repoPath + "/barnes/code.c", repoPath +
+    // "/barnes/grav.c"};
+
+    // fourth commit:
+    // changedFiles = {repoPath + "/barnes/defs.h"};
+
+    // fifth commit:
+    // changedFiles = {repoPath + "/barnes/load.c", repoPath +
+    // "/barnes/code_io.c",
+    //                 repoPath + "/barnes/code.h", repoPath +
+    //                 "/barnes/code.c"};
+
+    // sixth commit:
+    // changedFiles = {repoPath + "/barnes/code.c"};
+
+    // seventh commit:
+    changedFiles = {repoPath + "/barnes/load.c"};
   }
 
   // changedFiles = {"test_files/Splash-4/altered/cholesky/amal.c"};
