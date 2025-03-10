@@ -42,8 +42,9 @@ int main() {
   Parser parser(&callGraph, &fileIncludes);
 
   // std::string repoPath = "~/dissertation/Eraser-CD";
-  std::string repoPath = "test_files/Splash-3/"
-                         "6d2b0ca8626e79481f3131ce0adf7a29fc242016";
+  std::string repoPath =
+      "test_files/Splash-3/"
+      "e35efba59688a585275d19a16bc6f9371da978e0/ocean_non_contiguous";
   std::set<std::string> changedFiles;
   if (initialCommit) {
     // changedFiles = {"test_files/single_files/largest_check.c"};
@@ -91,6 +92,40 @@ int main() {
 
     // changedFiles = {"test_files/Splash-4/altered/cholesky/solve.c"};
 
+    // ocean non contiguous testing Splash-3
+
+    // second commit:
+    // changedFiles = {repoPath + "/main.c", repoPath + "/slave1.c"};
+
+    // third, fourth, fifth, sixth commit:
+    // changedFiles = {repoPath + "/main.c", repoPath + "/decs.h"};
+    // changedFiles = diffAnalysis.getAllFiles(repoPath);
+
+    // seventh commit
+    changedFiles = {repoPath + "/slave2.c"};
+
+    // volrend testing Splash-3
+
+    // second commit:
+    // changedFiles = {repoPath + "/adaptive.c", repoPath + "/anl.h",
+    //                 repoPath + "/file.c", repoPath + "/main.c"};
+
+    // third commit:
+    // changedFiles = {repoPath + "/normal.c", repoPath + "/octree.c",
+    //                 repoPath + "/opacity.c"};
+
+    // fourth commit:
+    // changedFiles = {repoPath + "/const.h", repoPath + "/global.h",
+    //                 repoPath + "/main.c", repoPath + "/user_options.h"};
+
+    // fifth commit:
+    // changedFiles = {repoPath + "/adaptive.c", repoPath + "/anl.h",
+    //                 repoPath + "/main.c",     repoPath + "/normal.c",
+    //                 repoPath + "/octree.c",   repoPath + "/opacity.c"};
+
+    // sixth and seventh commit:
+    // changedFiles = {repoPath + "/main.c"};
+
     // barnes testing Splash-3
 
     // second commit:
@@ -117,7 +152,7 @@ int main() {
     // changedFiles = {repoPath + "/barnes/code.c"};
 
     // seventh commit:
-    changedFiles = {repoPath + "/barnes/load.c"};
+    // changedFiles = {repoPath + "/barnes/load.c"};
   }
 
   // changedFiles = {"test_files/Splash-4/altered/cholesky/amal.c"};
