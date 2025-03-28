@@ -5,6 +5,7 @@
 #include "debug_tools.h"
 #include "delta_lockset.h"
 #include "diff_analysis.h"
+#include "eraser_settings.h"
 #include "file_includes.h"
 #include "function_cumulative_locksets.h"
 #include "function_variable_locksets.h"
@@ -13,6 +14,7 @@
 #include "variable_locksets.h"
 #include <chrono>
 #include <clang-c/Index.h>
+#include <filesystem>
 #include <iostream>
 #include <sys/resource.h>
 #include <unordered_map>
@@ -29,22 +31,48 @@ void logTimeSinceLast(
   currTime = nextTime;
 }
 
-int main() {
+bool fileExists(const std::string &filename) {
+  std::ifstream file(filename);
+  return file.good();
+}
+
+int main(int argc, char *argv[]) {
+  if (argc != 3 && argc != 2) {
+    std::cout
+        << "Expected usage: static_eraser <path> <commit_hash> <initial_commit>"
+        << std::endl;
+    return 0;
+  }
+  std::string repoPath = argv[0];
+  std::string currHash = argv[1];
+  bool initialCommit = (argc == 3 && (std::string(argv[2]) == "y" ||
+                                      std::string(argv[2]) == "Y")) ||
+                       !fileExists(Database::dbName);
+
   auto startTime = std::chrono::high_resolution_clock::now();
   auto currTime = startTime;
 
-  bool initialCommit = true;
   Database db(initialCommit);
   FunctionEraserSets functionEraserSets(&db);
   CallGraph callGraph(&db);
   FileIncludes fileIncludes(&db);
+  EraserSettings eraserSettings(&db);
   DiffAnalysis diffAnalysis(&fileIncludes);
   Parser parser(&callGraph, &fileIncludes);
 
+  std::string prevHash = eraserSettings.getAndUpdatePrevHash(currHash);
+  std::set<std::string> changedFiles;
+  if (initialCommit) {
+    changedFiles = diffAnalysis.getAllFiles(repoPath);
+  } else {
+    changedFiles = diffAnalysis.getChangedFiles(repoPath, prevHash, currHash);
+  }
+
   // std::string repoPath = "~/dissertation/Eraser-CD";
-  std::string repoPath =
-      "test_files/Splash-3/"
-      "e35efba59688a585275d19a16bc6f9371da978e0/ocean_non_contiguous";
+  // std::string repoPath =
+  //     "test_files/Splash-3/"
+  //     "e35efba59688a585275d19a16bc6f9371da978e0/ocean_non_contiguous";
+  /*
   std::set<std::string> changedFiles;
   if (initialCommit) {
     // changedFiles = {"test_files/single_files/largest_check.c"};
@@ -82,13 +110,13 @@ int main() {
     // changedFiles = {"test_files/Splash-4/altered/fft.c"};
     // changedFiles = {};
     // changedFiles +=
-    //     fileIncludes->getChildren("test_files/Splash-4/altered/barnes/code.h");
+    // fileIncludes->getChildren("test_files/Splash-4/altered/barnes/code.h");
     changedFiles = {
         "test_files/Splash-4/altered/ocean-non_contiguous_partitions/main.c"};
     // changedFiles = {
     //     "test_files/Splash-4/altered/ocean-non_contiguous_partitions/main.c",
-    //     "test_files/Splash-4/altered/ocean-non_contiguous_partitions/slave1.c",
-    //     "test_files/Splash-4/altered/ocean-non_contiguous_partitions/slave2.c"};
+    // "test_files/Splash-4/altered/ocean-non_contiguous_partitions/slave1.c",
+    // "test_files/Splash-4/altered/ocean-non_contiguous_partitions/slave2.c"};
 
     // changedFiles = {"test_files/Splash-4/altered/cholesky/solve.c"};
 
@@ -154,6 +182,7 @@ int main() {
     // seventh commit:
     // changedFiles = {repoPath + "/barnes/load.c"};
   }
+    */
 
   // changedFiles = {"test_files/Splash-4/altered/cholesky/amal.c"};
   debugCout << "Parsing changed files:" << std::endl;
@@ -223,7 +252,7 @@ int main() {
       memUsage = stoi(entry);
     }
   }
-  std::cout << "Memory usage: " << (int)(4096 * memUsage / 1e6) << " MB"
+  std::cout << "Memory usage: " << (int)(4096 * memUsage / 1e3) << " KB"
             << std::endl;
   std::cout << std::endl;
 }

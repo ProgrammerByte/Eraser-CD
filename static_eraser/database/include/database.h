@@ -8,6 +8,7 @@
 
 class Database {
 public:
+  static const std::string dbName;
   explicit Database(bool initialCommit);
   virtual ~Database();
 
@@ -25,7 +26,6 @@ public:
   std::string getStringFromStatement(sqlite3_stmt *stmt, int col);
 
 private:
-  std::string dbName = "eraser.db";
   char *errMsg = 0;
   sqlite3 *db;
 };

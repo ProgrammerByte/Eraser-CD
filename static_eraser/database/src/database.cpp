@@ -1,5 +1,7 @@
 #include "database.h"
 
+const std::string Database::dbName = "eraser.db";
+
 void Database::prepareStatement(sqlite3_stmt *&stmt, std::string query,
                                 std::vector<std::string> &params) {
   if (sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
@@ -50,6 +52,13 @@ void Database::createTable(std::string query, std::string tableName) {
 }
 
 void Database::createTables() {
+  createTable(R"(
+    CREATE TABLE eraser_settings (
+      prev_hash TEXT
+    )
+  )",
+              "eraser_settings");
+
   createTable(R"(
     CREATE TABLE file_includes (
       filename TEXT,
