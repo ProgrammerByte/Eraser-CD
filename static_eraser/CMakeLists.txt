@@ -13,8 +13,8 @@ set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 file(GLOB DIGRAPH_SRC CONFIGURE_DEPENDS src/*.cpp database/src/*.cpp graph_nodes/src/*.cpp)
-include_directories("/usr/lib/llvm-14/include" ./include ./database/include ./graph_nodes/include)
-link_directories("/usr/lib/llvm-14/lib")
+include_directories("/usr/lib/llvm-18/include" ./include ./database/include ./graph_nodes/include)
+link_directories("/usr/lib/llvm-18/lib")
 
 find_package(SQLite3 REQUIRED)
 
