@@ -66,5 +66,7 @@ void GraphVisualizer::visualizeGraph(StartNode *node) {
   file << "}\n";
 
   file.close();
-  system("dot -Tpng graph.dot -o graph.png");
+  if (system("dot -Tpng graph.dot -o graph.png") == -1) {
+    std::cerr << "Error: Unable to create PNG file!" << std::endl;
+  }
 }

@@ -55,7 +55,14 @@
         "set": "cpp",
         "unordered_set": "cpp",
         "pthread.h": "c",
-        "cinttypes": "cpp"
+        "cinttypes": "cpp",
+        "charconv": "cpp",
+        "codecvt": "cpp",
+        "optional": "cpp",
+        "format": "cpp",
+        "iomanip": "cpp",
+        "span": "cpp",
+        "variant": "cpp"
     },
     "cSpell.words": [
         "STARTWHILE"
