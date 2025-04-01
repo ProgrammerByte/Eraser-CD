@@ -85,7 +85,7 @@ void FunctionEraserSets::insertCurrSetsIntoDb(bool locksChanged,
   db->runStatement(stmt);
 
   query =
-      "INSERT INTO function_locks (funcname, varname, type) VALUES (?, ?, ?);";
+      "INSERT INTO function_locks (funcname, lock, type) VALUES (?, ?, ?);";
   for (const std::string &lock : currFuncSets.locks) {
     params = {currFunc, lock, "lock"};
     db->prepareStatement(stmt, query, params);

@@ -311,17 +311,23 @@ void Render_Loop() {
       };
 
       if (my_node == num_nodes - 1) {
-        for (i = image_partition * my_node; i < image_length; i++)
+        for (i = image_partition * my_node; i < image_length; i++) {
           *local_image_address++ = background;
-        if (adaptive)
-          for (i = mask_image_partition * my_node; i < mask_image_length; i++)
+        }
+        if (adaptive) {
+          for (i = mask_image_partition * my_node; i < mask_image_length; i++) {
             *local_mask_image_address++ = NULL_PIXEL;
+          }
+        }
       } else {
-        for (i = 0; i < image_partition; i++)
+        for (i = 0; i < image_partition; i++) {
           *local_image_address++ = background;
-        if (adaptive)
-          for (i = 0; i < mask_image_partition; i++)
+        }
+        if (adaptive) {
+          for (i = 0; i < mask_image_partition; i++) {
             *local_mask_image_address++ = NULL_PIXEL;
+          }
+        }
       }
 
       if (my_node == ROOT) {

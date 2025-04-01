@@ -165,7 +165,7 @@ std::string getNthArg(CXCursor cursor, int targetArg, bool isPtr = false) {
   if (clientData.argNum >= targetArg && !clientData.isPtr) {
     CXCursor argCursor = *clientData.argCursor;
 
-    while (clang_getCursorKind(argCursor) == CXCursor_UnexposedExpr) {
+    while (clang_getCursorKind(argCursor) == CXCursor_ParenExpr || clang_getCursorKind(argCursor) == CXCursor_UnexposedExpr) {
       argCursor = getFirstChild(argCursor);
     }
     if (clang_getCursorKind(argCursor) == CXCursor_DeclRefExpr) {

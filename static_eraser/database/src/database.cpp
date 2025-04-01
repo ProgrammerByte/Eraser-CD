@@ -105,10 +105,10 @@ void Database::createTables() {
   createTable(R"(
     CREATE TABLE function_locks (
       funcname TEXT,
-      varname TEXT,
+      lock TEXT,
       type TEXT CHECK(type IN ('lock', 'unlock')),
       FOREIGN KEY (funcname) REFERENCES function_eraser_sets(funcname) ON DELETE CASCADE,
-      UNIQUE(funcname, varname)
+      UNIQUE(funcname, lock)
     );
   )",
               "function_locks");
