@@ -37,16 +37,17 @@ bool fileExists(const std::string &filename) {
 }
 
 int main(int argc, char *argv[]) {
-  if (argc != 3 && argc != 2) {
+  if (argc != 4 && argc != 3) {
     std::cout
         << "Expected usage: static_eraser <path> <commit_hash> <initial_commit>"
         << std::endl;
     return 0;
   }
-  std::string repoPath = argv[0];
-  std::string currHash = argv[1];
-  bool initialCommit = (argc == 3 && (std::string(argv[2]) == "y" ||
-                                      std::string(argv[2]) == "Y")) ||
+  std::string repoPath = argv[1];
+  std::string currHash = argv[2];
+
+  bool initialCommit = (argc == 4 && (std::string(argv[3]) == "y" ||
+                                      std::string(argv[3]) == "Y")) ||
                        !fileExists(Database::dbName);
 
   auto startTime = std::chrono::high_resolution_clock::now();
