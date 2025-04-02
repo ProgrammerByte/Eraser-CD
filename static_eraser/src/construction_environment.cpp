@@ -29,7 +29,7 @@ void ConstructionEnvironment::onAdd(GraphNode *node) {
 }
 
 void ConstructionEnvironment::goBackToStartWhile() {
-  ConstructionEnvironment::onAdd(startwhileStack.back());
+  callOnAdd(startwhileStack.back());
 }
 
 void ConstructionEnvironment::callOnAdd(GraphNode *node) { onAdd(node); }
