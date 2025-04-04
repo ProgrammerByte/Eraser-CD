@@ -281,5 +281,5 @@ int main(int argc, char *argv[]) {
   std::cout << std::endl;
   if (outFile.is_open()) {
     outFile.close();
-}
+  }
 }
