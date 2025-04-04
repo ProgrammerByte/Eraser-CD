@@ -19,6 +19,10 @@
 #include <sys/resource.h>
 #include <unordered_map>
 #include <vector>
+#include <fstream>
+
+bool saveTimes = false;
+std::ofstream outFile;
 
 void logTimeSinceLast(
     std::string label,
@@ -27,6 +31,10 @@ void logTimeSinceLast(
   auto duration =
       std::chrono::duration_cast<std::chrono::milliseconds>(nextTime - currTime)
           .count();
+  
+  if (saveTimes) {
+    outFile << duration << " ";
+  }
   std::cout << label << duration << "ms" << std::endl;
   currTime = nextTime;
 }
@@ -37,18 +45,27 @@ bool fileExists(const std::string &filename) {
 }
 
 int main(int argc, char *argv[]) {
-  if (argc != 4 && argc != 3) {
+  if (argc != 5) {
     std::cout
-        << "Expected usage: static_eraser <path> <commit_hash> <initial_commit>"
+        << "Expected usage: static_eraser <path> <commit_hash> <initial_commit> <simplified_output>"
         << std::endl;
     return 0;
   }
   std::string repoPath = argv[1];
   std::string currHash = argv[2];
 
-  bool initialCommit = (argc == 4 && (std::string(argv[3]) == "y" ||
-                                      std::string(argv[3]) == "Y")) ||
+  bool initialCommit = (std::string(argv[3]) == "y" || std::string(argv[3]) == "Y") ||
                        !fileExists(Database::dbName);
+
+  saveTimes = (std::string(argv[4]) == "y" || std::string(argv[4]) == "Y");
+
+  if (saveTimes) {
+    outFile.open("timing_output.txt");
+    if (!outFile.is_open()) {
+      std::cerr << "Failed to open file for writing." << std::endl;
+      return 1;
+    }
+  }
 
   auto startTime = std::chrono::high_resolution_clock::now();
   auto currTime = startTime;
@@ -239,6 +256,9 @@ int main(int argc, char *argv[]) {
       std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime)
           .count();
 
+  if (saveTimes) {
+    outFile << duration << " ";
+  }
   std::cout << "Total time taken: " << duration << "ms" << std::endl;
 
   std::ifstream statFile("/proc/self/stat");
@@ -253,7 +273,13 @@ int main(int argc, char *argv[]) {
       memUsage = stoi(entry);
     }
   }
+  if (saveTimes) {
+    outFile << (int)(4096 * memUsage / 1e3);
+  }
   std::cout << "Memory usage: " << (int)(4096 * memUsage / 1e3) << " KB"
             << std::endl;
   std::cout << std::endl;
+  if (outFile.is_open()) {
+    outFile.close();
+}
 }
