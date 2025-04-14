@@ -14,6 +14,7 @@ static StartNode *startNode = nullptr;
 static ConstructionEnvironment *environment;
 static CallGraph *callGraph;
 static bool updateCallGraph;
+static bool eraserIgnoreOn = false;
 
 std::unordered_map<std::string, StartNode *> funcCfgs;
 
@@ -190,23 +191,19 @@ std::string getFuncName(CXCursor cursor, std::string funcName) {
 void handleFunctionCall(CXCursor cursor, std::vector<GraphNode *> *nodesToAdd) {
   std::string caller = funcName;
   std::string funcName = clang_getCString(clang_getCursorSpelling(cursor));
-
-  if (funcName == "pthread_create") {
-    std::string called = getNthArg(cursor, 3);
-    if (called != "") {
-      std::string spelling = getNthArg(cursor, 1, true);
-      VariableInfo variableInfo = findVariableInfo(spelling);
+  if (funcName == "EraserIgnoreOff") {
+    eraserIgnoreOn = false;
+    environment->onAdd(new EraserIgnoreOffNode());
+  } else if (funcName == "pthread_mutex_lock" ||
+    funcName == "pthread_mutex_unlock") {
+    std::string spelling = getNthArg(cursor, 1, true);
+    VariableInfo variableInfo = findVariableInfo(spelling);
+    if (isSharedVar(variableInfo)) {
       std::string varName = getVariableName(spelling, cursor, variableInfo);
-      std::string funcName = getFuncName(cursor, called);
-      bool global = isSharedVar(variableInfo);
-      environment->onAdd(new ThreadCreateNode(funcName, varName, global));
-      if (global && varName != "") {
-        environment->onAdd(new WriteNode(varName));
-      }
-      // TODO - MAYBE CHANGE EDGE TYPE HERE?? ONLY AN OPTIMISATION FOR DELTA
-      // LOCKSETS
-      if (updateCallGraph) {
-        callGraph->addEdge(caller, funcName, true);
+      if (funcName == "pthread_mutex_lock") {
+        environment->onAdd(new LockNode(varName));
+      } else if (funcName == "pthread_mutex_unlock") {
+        environment->onAdd(new UnlockNode(varName));
       }
     }
   } else if (funcName == "pthread_join") {
@@ -220,27 +217,34 @@ void handleFunctionCall(CXCursor cursor, std::vector<GraphNode *> *nodesToAdd) {
     // TODO - USE SECOND ARG FOR RETURN VALUE, MAKE WRITE NODE AS NEEDED
     // however can be generalised somewhat i.e. if passing ptr to func then
     // treat as write. Okay for this algorithm
-  } else if (funcName == "pthread_mutex_lock" ||
-             funcName == "pthread_mutex_unlock") {
-    std::string spelling = getNthArg(cursor, 1, true);
-    VariableInfo variableInfo = findVariableInfo(spelling);
-    if (isSharedVar(variableInfo)) {
-      std::string varName = getVariableName(spelling, cursor, variableInfo);
-      if (funcName == "pthread_mutex_lock") {
-        environment->onAdd(new LockNode(varName));
-      } else if (funcName == "pthread_mutex_unlock") {
-        environment->onAdd(new UnlockNode(varName));
+  } else if (!eraserIgnoreOn) {
+    if (funcName == "pthread_create") {
+      std::string called = getNthArg(cursor, 3);
+      if (called != "") {
+        std::string spelling = getNthArg(cursor, 1, true);
+        VariableInfo variableInfo = findVariableInfo(spelling);
+        std::string varName = getVariableName(spelling, cursor, variableInfo);
+        std::string funcName = getFuncName(cursor, called);
+        bool global = isSharedVar(variableInfo);
+        environment->onAdd(new ThreadCreateNode(funcName, varName, global));
+        if (global && varName != "") {
+          environment->onAdd(new WriteNode(varName));
+        }
+        // TODO - MAYBE CHANGE EDGE TYPE HERE?? ONLY AN OPTIMISATION FOR DELTA
+        // LOCKSETS
+        if (updateCallGraph) {
+          callGraph->addEdge(caller, funcName, true);
+        }
       }
-    }
-  } else if (funcName == "EraserIgnoreOn") {
-    environment->onAdd(new EraserIgnoreOnNode());
-  } else if (funcName == "EraserIgnoreOff") {
-    environment->onAdd(new EraserIgnoreOffNode());
-  } else {
-    funcName = getFuncName(cursor, funcName);
-    (*nodesToAdd).push_back(new FunctionCallNode(funcName));
-    if (updateCallGraph) {
-      callGraph->addEdge(caller, funcName, false);
+    } else if (funcName == "EraserIgnoreOn") {
+      eraserIgnoreOn = true;
+      environment->onAdd(new EraserIgnoreOnNode());
+    } else if (funcName != "pthread_cond_wait" && funcName != "pthread_cond_broadcast") {
+      funcName = getFuncName(cursor, funcName);
+      (*nodesToAdd).push_back(new FunctionCallNode(funcName));
+      if (updateCallGraph) {
+        callGraph->addEdge(caller, funcName, false);
+      }
     }
   }
 }
