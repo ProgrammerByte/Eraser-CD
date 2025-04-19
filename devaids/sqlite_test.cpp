@@ -23,7 +23,7 @@ void createTables() {
   std::cout << "Created database successfully" << std::endl;
 
   std::string query = R"(
-    CREATE TABLE nodes_table (
+    CREATE TABLE functions_table (
       funcname TEXT PRIMARY KEY,
       indegree INTEGER DEFAULT 0,
       marked BOOLEAN DEFAULT FALSE
@@ -31,56 +31,56 @@ void createTables() {
   )";
 
   if (sqlite3_exec(db, query.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
-    std::cerr << "Error creating nodes_table: " << errMsg << std::endl;
+    std::cerr << "Error creating functions_table: " << errMsg << std::endl;
     sqlite3_free(errMsg);
   } else {
-    std::cout << "Table nodes_table created successfully." << std::endl;
+    std::cout << "Table functions_table created successfully." << std::endl;
   }
 
   query = R"(
-    CREATE TABLE adjacency_matrix (
-      funcname1 TEXT,
-      funcname2 TEXT,
-      FOREIGN KEY (funcname1) REFERENCES nodes(funcname),
-      FOREIGN KEY (funcname2) REFERENCES nodes(funcname)
-      UNIQUE(funcname1, funcname2)
+    CREATE TABLE function_calls (
+      caller TEXT,
+      callee TEXT,
+      FOREIGN KEY (caller) REFERENCES nodes(funcname),
+      FOREIGN KEY (callee) REFERENCES nodes(funcname)
+      UNIQUE(caller, callee)
     );
   )";
 
   if (sqlite3_exec(db, query.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
-    std::cerr << "Error creating adjacency_matrix: " << errMsg << std::endl;
+    std::cerr << "Error creating function_calls: " << errMsg << std::endl;
     sqlite3_free(errMsg);
   } else {
-    std::cout << "Table adjacency_matrix created successfully." << std::endl;
+    std::cout << "Table function_calls created successfully." << std::endl;
   }
 }
 
 void insertExampleData() {
   std::string query = R"(
-    INSERT INTO nodes_table (funcname)
+    INSERT INTO functions_table (funcname)
     VALUES ('t1'), ('t2'), ('t3'), ('f1'), ('f2'), ('f3'), ('f4'), ('f5'), ('f6'), ('f7');
   )";
 
   if (sqlite3_exec(db, query.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
-    std::cerr << "Error inserting into nodes_table: " << errMsg << std::endl;
+    std::cerr << "Error inserting into functions_table: " << errMsg << std::endl;
     sqlite3_free(errMsg);
   } else {
-    std::cout << "Inserted into nodes_table successfully." << std::endl;
+    std::cout << "Inserted into functions_table successfully." << std::endl;
   }
 
   query = R"(
-    INSERT INTO adjacency_matrix (funcname1, funcname2)
+    INSERT INTO function_calls (caller, callee)
     VALUES ('t1', 'f1'), ('t2', 'f2'), ('t3', 'f5'),
            ('f1', 'f3'), ('f1', 'f4'), ('f2', 'f4'), ('f2', 'f6'),
            ('f2', 'f7'), ('f4', 'f6'), ('f5', 'f6'), ('f7', 'f6')
   )";
 
   if (sqlite3_exec(db, query.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
-    std::cerr << "Error inserting into adjacency_matrix: " << errMsg
+    std::cerr << "Error inserting into function_calls: " << errMsg
               << std::endl;
     sqlite3_free(errMsg);
   } else {
-    std::cout << "Inserted into adjacency_matrix successfully." << std::endl;
+    std::cout << "Inserted into function_calls successfully." << std::endl;
   }
 }
 
@@ -137,7 +137,7 @@ void markNodes(std::vector<std::string> &startNodes, bool reverse = false) {
   sqlite3_stmt *stmt;
 
   while (!q.empty()) {
-    std::string query = "UPDATE nodes_table SET marked = 1 WHERE funcname "
+    std::string query = "UPDATE functions_table SET marked = 1 WHERE funcname "
                         "IN " +
                         createTupleList(q) + ";";
     prepareStatement(stmt, query, q);
@@ -146,42 +146,42 @@ void markNodes(std::vector<std::string> &startNodes, bool reverse = false) {
     if (reverse) {
       query =
           "WITH neighbors AS ("
-          " SELECT funcname1 AS funcname, COUNT(*) AS cnt FROM "
-          "adjacency_matrix "
-          " JOIN nodes_table ON nodes_table.funcname = "
-          " adjacency_matrix.funcname1 WHERE adjacency_matrix.funcname2 IN " +
+          " SELECT caller AS funcname, COUNT(*) AS cnt FROM "
+          "function_calls "
+          " JOIN functions_table ON functions_table.funcname = "
+          " function_calls.caller WHERE function_calls.callee IN " +
           createTupleList(q) +
-          " GROUP BY funcname1"
+          " GROUP BY caller"
           "),"
           "result AS ("
           " SELECT neighbors.funcname FROM neighbors"
-          " INNER JOIN nodes_table ON nodes_table.funcname = neighbors.funcname"
+          " INNER JOIN functions_table ON functions_table.funcname = neighbors.funcname"
           " WHERE marked = 0"
           ")"
-          "UPDATE nodes_table "
+          "UPDATE functions_table "
           "SET indegree = indegree + COALESCE(("
           " SELECT cnt FROM neighbors WHERE neighbors.funcname = "
-          " nodes_table.funcname"
+          " functions_table.funcname"
           "), 0);";
     } else {
       query =
           "WITH neighbors AS ("
-          " SELECT funcname2 AS funcname, COUNT(*) AS cnt FROM "
-          "adjacency_matrix "
-          " JOIN nodes_table ON nodes_table.funcname = "
-          " adjacency_matrix.funcname2 WHERE adjacency_matrix.funcname1 IN " +
+          " SELECT callee AS funcname, COUNT(*) AS cnt FROM "
+          "function_calls "
+          " JOIN functions_table ON functions_table.funcname = "
+          " function_calls.callee WHERE function_calls.caller IN " +
           createTupleList(q) +
-          " GROUP BY funcname2"
+          " GROUP BY callee"
           "),"
           "result AS ("
           " SELECT neighbors.funcname FROM neighbors"
-          " INNER JOIN nodes_table ON nodes_table.funcname = neighbors.funcname"
+          " INNER JOIN functions_table ON functions_table.funcname = neighbors.funcname"
           " WHERE marked = 0"
           ")"
-          "UPDATE nodes_table "
+          "UPDATE functions_table "
           "SET indegree = indegree + COALESCE(("
           " SELECT cnt FROM neighbors WHERE neighbors.funcname = "
-          " nodes_table.funcname"
+          " functions_table.funcname"
           "), 0);";
     }
 
@@ -189,7 +189,7 @@ void markNodes(std::vector<std::string> &startNodes, bool reverse = false) {
     runStatement(stmt);
 
     query =
-        "SELECT funcname FROM nodes_table WHERE marked = 0 AND indegree > 0;";
+        "SELECT funcname FROM functions_table WHERE marked = 0 AND indegree > 0;";
 
     prepareStatement(stmt, query);
 
@@ -206,7 +206,7 @@ void markNodes(std::vector<std::string> &startNodes, bool reverse = false) {
 std::vector<std::string> getNextNodes(std::vector<std::string> &order) {
   sqlite3_stmt *stmt;
   std::string query =
-      "SELECT funcname FROM nodes_table WHERE marked = 1 AND indegree = 0;";
+      "SELECT funcname FROM functions_table WHERE marked = 1 AND indegree = 0;";
   prepareStatement(stmt, query);
   std::vector<std::string> q = {};
   while (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -217,7 +217,7 @@ std::vector<std::string> getNextNodes(std::vector<std::string> &order) {
   }
   sqlite3_finalize(stmt);
 
-  query = "UPDATE nodes_table SET marked = 0 WHERE funcname "
+  query = "UPDATE functions_table SET marked = 0 WHERE funcname "
           "IN " +
           createTupleList(q) + ";";
   prepareStatement(stmt, query, q);
@@ -236,42 +236,42 @@ std::vector<std::string> traverseGraph(bool reverse = false) {
     if (reverse) {
       query =
           "WITH neighbors AS ("
-          " SELECT funcname1 AS funcname, COUNT(*) AS cnt FROM "
-          "adjacency_matrix "
-          " JOIN nodes_table ON nodes_table.funcname = "
-          " adjacency_matrix.funcname1 WHERE adjacency_matrix.funcname2 IN " +
+          " SELECT caller AS funcname, COUNT(*) AS cnt FROM "
+          "function_calls "
+          " JOIN functions_table ON functions_table.funcname = "
+          " function_calls.caller WHERE function_calls.callee IN " +
           createTupleList(q) +
-          " GROUP BY funcname1"
+          " GROUP BY caller"
           "),"
           "result AS ("
           " SELECT neighbors.funcname FROM neighbors"
-          " INNER JOIN nodes_table ON nodes_table.funcname = neighbors.funcname"
+          " INNER JOIN functions_table ON functions_table.funcname = neighbors.funcname"
           " WHERE marked = 1"
           ")"
-          "UPDATE nodes_table "
+          "UPDATE functions_table "
           "SET indegree = indegree - COALESCE(("
           " SELECT cnt FROM neighbors WHERE neighbors.funcname = "
-          " nodes_table.funcname"
+          " functions_table.funcname"
           "), 0);";
     } else {
       query =
           "WITH neighbors AS ("
-          " SELECT funcname2 AS funcname, COUNT(*) AS cnt FROM "
-          "adjacency_matrix "
-          " JOIN nodes_table ON nodes_table.funcname = "
-          " adjacency_matrix.funcname2 WHERE adjacency_matrix.funcname1 IN " +
+          " SELECT callee AS funcname, COUNT(*) AS cnt FROM "
+          "function_calls "
+          " JOIN functions_table ON functions_table.funcname = "
+          " function_calls.callee WHERE function_calls.caller IN " +
           createTupleList(q) +
-          " GROUP BY funcname2"
+          " GROUP BY callee"
           "),"
           "result AS ("
           " SELECT neighbors.funcname FROM neighbors"
-          " INNER JOIN nodes_table ON nodes_table.funcname = neighbors.funcname"
+          " INNER JOIN functions_table ON functions_table.funcname = neighbors.funcname"
           " WHERE marked = 1"
           ")"
-          "UPDATE nodes_table "
+          "UPDATE functions_table "
           "SET indegree = indegree - COALESCE(("
           " SELECT cnt FROM neighbors WHERE neighbors.funcname = "
-          " nodes_table.funcname"
+          " functions_table.funcname"
           "), 0);";
     }
 

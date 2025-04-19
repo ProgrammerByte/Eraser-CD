@@ -69,7 +69,7 @@ void Database::createTables() {
               "file_includes");
 
   createTable(R"(
-    CREATE TABLE nodes_table (
+    CREATE TABLE functions_table (
       funcname TEXT PRIMARY KEY,
       indegree INTEGER DEFAULT 0,
       marked BOOLEAN DEFAULT FALSE,
@@ -78,26 +78,26 @@ void Database::createTables() {
       stale BOOLEAN DEFAULT FALSE
     );
   )",
-              "nodes_table");
+              "functions_table");
 
   createTable(R"(
-    CREATE TABLE adjacency_matrix (
-      funcname1 TEXT,
-      funcname2 TEXT,
+    CREATE TABLE function_calls (
+      caller TEXT,
+      callee TEXT,
       on_thread BOOLEAN DEFAULT FALSE,
-      FOREIGN KEY (funcname1) REFERENCES nodes_table(funcname) ON DELETE CASCADE,
-      FOREIGN KEY (funcname2) REFERENCES nodes_table(funcname) ON DELETE CASCADE,
-      UNIQUE(funcname1, funcname2, on_thread)
+      FOREIGN KEY (caller) REFERENCES functions_table(funcname) ON DELETE CASCADE,
+      FOREIGN KEY (callee) REFERENCES functions_table(funcname) ON DELETE CASCADE,
+      UNIQUE(caller, callee, on_thread)
     );
   )",
-              "adjacency_matrix");
+              "function_calls");
 
   createTable(R"(
     CREATE TABLE function_eraser_sets (
       funcname TEXT PRIMARY KEY,
       locks_changed BOOLEAN DEFAULT TRUE,
       vars_changed BOOLEAN DEFAULT TRUE,
-      FOREIGN KEY (funcname) REFERENCES nodes_table(funcname) ON DELETE CASCADE
+      FOREIGN KEY (funcname) REFERENCES functions_table(funcname) ON DELETE CASCADE
     );
   )",
               "function_eraser_sets");
@@ -183,7 +183,7 @@ void Database::createTables() {
       recently_changed BOOLEAN DEFAULT TRUE,
       caller_locks_changed BOOLEAN DEFAULT FALSE,
       callee_locks_changed BOOLEAN DEFAULT FALSE,
-      FOREIGN KEY (funcname) REFERENCES nodes_table(funcname) ON DELETE CASCADE,
+      FOREIGN KEY (funcname) REFERENCES functions_table(funcname) ON DELETE CASCADE,
       UNIQUE(funcname, testname)
     );
   )",
@@ -238,45 +238,45 @@ void Database::createTables() {
       funcname TEXT,
       varname TEXT,
       type TEXT CHECK(type IN ('read', 'write')),
-      FOREIGN KEY (funcname) REFERENCES nodes_table(funcname) ON DELETE CASCADE,
+      FOREIGN KEY (funcname) REFERENCES functions_table(funcname) ON DELETE CASCADE,
       UNIQUE(funcname, varname, type)
     );
   )",
               "function_variable_direct_accesses");
 
   createTable(R"(
-    CREATE TABLE function_variable_cumulative_locksets (
+    CREATE TABLE function_cumulative_locksets (
       id INTEGER PRIMARY KEY,
       funcname TEXT,
       testname TEXT,
       recently_changed BOOLEAN DEFAULT TRUE,
-      FOREIGN KEY (funcname) REFERENCES nodes_table(funcname) ON DELETE CASCADE,
+      FOREIGN KEY (funcname) REFERENCES functions_table(funcname) ON DELETE CASCADE,
       UNIQUE(funcname, testname)
     );
   )",
-              "function_variable_cumulative_locksets");
+              "function_cumulative_locksets");
 
   createTable(R"(
-    CREATE TABLE function_variable_cumulative_locksets_outputs (
-      function_variable_cumulative_locksets_id INTEGER,
+    CREATE TABLE function_cumulative_locksets_outputs (
+      function_cumulative_locksets_id INTEGER,
       varname TEXT,
       lock TEXT,
-      FOREIGN KEY (function_variable_cumulative_locksets_id) REFERENCES function_variable_cumulative_locksets(id) ON DELETE CASCADE,
-      UNIQUE(function_variable_cumulative_locksets_id, varname, lock)
+      FOREIGN KEY (function_cumulative_locksets_id) REFERENCES function_cumulative_locksets(id) ON DELETE CASCADE,
+      UNIQUE(function_cumulative_locksets_id, varname, lock)
     );
   )",
-              "function_variable_cumulative_locksets_outputs");
+              "function_cumulative_locksets_outputs");
 
   createTable(R"(
-    CREATE TABLE function_variable_cumulative_accesses (
+    CREATE TABLE function_cumulative_accesses (
       funcname TEXT,
       varname TEXT,
       type TEXT CHECK(type IN ('read', 'write')),
-      FOREIGN KEY (funcname) REFERENCES nodes_table(funcname) ON DELETE CASCADE
+      FOREIGN KEY (funcname) REFERENCES functions_table(funcname) ON DELETE CASCADE
       UNIQUE(funcname, varname, type)
     );
   )",
-              "function_variable_cumulative_accesses");
+              "function_cumulative_accesses");
 }
 
 Database::Database(bool initialCommit) {

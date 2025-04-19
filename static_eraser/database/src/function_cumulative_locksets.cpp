@@ -18,9 +18,9 @@ bool FunctionCumulativeLocksets::shouldVisitNode(std::string funcName) {
     return true;
   }
 
-  query = "SELECT 1 FROM function_variable_cumulative_locksets AS fvcl "
-          "JOIN adjacency_matrix AS am ON am.funcname2 = fvcl.funcname WHERE "
-          "fvcl.recently_changed = 1 AND am.funcname1 = ?;";
+  query = "SELECT 1 FROM function_cumulative_locksets AS fvcl "
+          "JOIN function_calls AS am ON am.callee = fvcl.funcname WHERE "
+          "fvcl.recently_changed = 1 AND am.caller = ?;";
 
   db->prepareStatement(stmt, query, params);
   result = sqlite3_step(stmt) == SQLITE_ROW;
@@ -32,7 +32,7 @@ std::set<std::string> FunctionCumulativeLocksets::getFunctionCumulativeAccesses(
     std::string funcName) {
   sqlite3_stmt *stmt;
   std::string query = "SELECT DISTINCT varname FROM "
-                      "function_variable_cumulative_accesses WHERE "
+                      "function_cumulative_accesses WHERE "
                       "funcname = ?;";
   std::vector<std::string> params = {funcName};
   db->prepareStatement(stmt, query, params);
@@ -49,7 +49,7 @@ TestVariableLocks FunctionCumulativeLocksets::getFunctionCumulativeLocksets(
     std::string funcName) {
   sqlite3_stmt *stmt;
   std::string query = "SELECT DISTINCT varname FROM "
-                      "function_variable_cumulative_accesses WHERE "
+                      "function_cumulative_accesses WHERE "
                       "funcname = ?;";
   std::vector<std::string> params = {funcName};
   db->prepareStatement(stmt, query, params);
@@ -60,7 +60,7 @@ TestVariableLocks FunctionCumulativeLocksets::getFunctionCumulativeLocksets(
   }
 
   query =
-      "SELECT id, testname FROM function_variable_cumulative_locksets WHERE "
+      "SELECT id, testname FROM function_cumulative_locksets WHERE "
       "funcname = ?;";
   db->prepareStatement(stmt, query, params);
 
@@ -76,8 +76,8 @@ TestVariableLocks FunctionCumulativeLocksets::getFunctionCumulativeLocksets(
   sqlite3_finalize(stmt);
 
   query =
-      "SELECT varname, lock FROM function_variable_cumulative_locksets_outputs "
-      "WHERE function_variable_cumulative_locksets_id = ?;";
+      "SELECT varname, lock FROM function_cumulative_locksets_outputs "
+      "WHERE function_cumulative_locksets_id = ?;";
   for (int i = 0; i < ids.size(); i++) {
     params = {ids[i]};
     db->prepareStatement(stmt, query, params);
@@ -102,7 +102,7 @@ FunctionCumulativeLocksets::computeFunctionCumulativeAccesses(
     std::string funcName) {
   sqlite3_stmt *stmt;
   std::string query =
-      "SELECT funcname2 FROM adjacency_matrix WHERE funcname1 = ?;";
+      "SELECT callee FROM function_calls WHERE caller = ?;";
   std::vector<std::string> params = {funcName};
   db->prepareStatement(stmt, query, params);
 
@@ -113,7 +113,7 @@ FunctionCumulativeLocksets::computeFunctionCumulativeAccesses(
   }
   sqlite3_finalize(stmt);
 
-  query = "SELECT DISTINCT varname FROM function_variable_cumulative_accesses "
+  query = "SELECT DISTINCT varname FROM function_cumulative_accesses "
           "WHERE funcname = ?;";
   for (const std::string &callee : callees) {
     params = {callee};
@@ -151,7 +151,7 @@ TestVariableLocks FunctionCumulativeLocksets::computeFunctionCumulativeLocksets(
         {testName, functionVariableLocksets->getVariableLocks(funcName, id)});
   }
 
-  query = "SELECT funcname2 FROM adjacency_matrix WHERE funcname1 = ?;";
+  query = "SELECT callee FROM function_calls WHERE caller = ?;";
   params = {funcName};
   db->prepareStatement(stmt, query, params);
   while (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -172,13 +172,13 @@ void FunctionCumulativeLocksets::deleteFunctionCumulativeData(
     std::string funcName) {
   sqlite3_stmt *stmt;
   std::string query =
-      "DELETE FROM function_variable_cumulative_locksets WHERE funcname = ?;";
+      "DELETE FROM function_cumulative_locksets WHERE funcname = ?;";
   std::vector<std::string> params = {funcName};
   db->prepareStatement(stmt, query, params);
   db->runStatement(stmt);
 
   query =
-      "DELETE FROM function_variable_cumulative_accesses WHERE funcname = ?;";
+      "DELETE FROM function_cumulative_accesses WHERE funcname = ?;";
   db->prepareStatement(stmt, query, params);
   db->runStatement(stmt);
 }
@@ -190,7 +190,7 @@ void FunctionCumulativeLocksets::insertFunctionCumulativeData(
       functionCumulativeData.variableAccesses;
 
   sqlite3_stmt *stmt;
-  std::string query = "INSERT INTO function_variable_cumulative_locksets "
+  std::string query = "INSERT INTO function_cumulative_locksets "
                       "(funcname, testname) VALUES (?, ?);";
   std::vector<std::string> params;
   for (const auto &pair : testVariableLocks) {
@@ -199,7 +199,7 @@ void FunctionCumulativeLocksets::insertFunctionCumulativeData(
     db->runStatement(stmt);
   }
 
-  query = "SELECT id FROM function_variable_cumulative_locksets WHERE "
+  query = "SELECT id FROM function_cumulative_locksets WHERE "
           "funcname = ? AND testname = ?;";
   for (const auto &pair : testVariableLocks) {
     params = {funcName, pair.first};
@@ -210,8 +210,8 @@ void FunctionCumulativeLocksets::insertFunctionCumulativeData(
     }
     sqlite3_finalize(stmt);
 
-    query = "INSERT INTO function_variable_cumulative_locksets_outputs "
-            "(function_variable_cumulative_locksets_id, varname, lock) "
+    query = "INSERT INTO function_cumulative_locksets_outputs "
+            "(function_cumulative_locksets_id, varname, lock) "
             "VALUES (?, ?, ?);";
     for (const auto &pair2 : pair.second) {
       for (const std::string &lock : pair2.second) {
@@ -222,7 +222,7 @@ void FunctionCumulativeLocksets::insertFunctionCumulativeData(
     }
   }
 
-  query = "INSERT INTO function_variable_cumulative_accesses (funcname, "
+  query = "INSERT INTO function_cumulative_accesses (funcname, "
           "varname, type) VALUES (?, ?, ?);";
   for (const std::string &varName : variableAccesses) {
     params = {funcName, varName, "read"};

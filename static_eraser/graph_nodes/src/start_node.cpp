@@ -3,7 +3,6 @@
 
 StartNode::StartNode(std::string funcName)
     : funcName(funcName), BasicNode::BasicNode(NodeType::START) {
-  priorNodes = 0;
   eraserIgnoreOn = false;
 }
 StartNode::~StartNode() = default;

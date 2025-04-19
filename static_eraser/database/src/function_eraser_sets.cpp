@@ -72,12 +72,12 @@ void FunctionEraserSets::insertCurrSetsIntoDb(bool locksChanged,
   db->runStatement(stmt);
 
   query =
-      "UPDATE nodes_table "
+      "UPDATE functions_table "
       "SET recently_changed = 1 "
       "WHERE funcname IN ("
-      "  SELECT funcname1 "
-      "  FROM adjacency_matrix "
-      "  JOIN nodes_table AS n2 ON adjacency_matrix.funcname2 = n2.funcname "
+      "  SELECT caller "
+      "  FROM function_calls "
+      "  JOIN functions_table AS n2 ON function_calls.callee = n2.funcname "
       "  WHERE n2.funcname = ?"
       ");";
   params = {currFunc};
@@ -299,7 +299,7 @@ void FunctionEraserSets::markFunctionEraserSetsAsOld() {
   db->prepareStatement(stmt, query);
   db->runStatement(stmt);
 
-  query = "UPDATE nodes_table SET recently_changed = 0;";
+  query = "UPDATE functions_table SET recently_changed = 0;";
   db->prepareStatement(stmt, query);
   db->runStatement(stmt);
 }

@@ -4,7 +4,7 @@ CallGraph::CallGraph(Database *db) : db(db){};
 
 void CallGraph::addNode(std::string funcName, std::string fileName) {
   std::string query =
-      "INSERT INTO nodes_table (funcname, filename) VALUES (?, ?) "
+      "INSERT INTO functions_table (funcname, filename) VALUES (?, ?) "
       "ON CONFLICT(funcname) DO UPDATE SET "
       "stale = 0, recently_changed = 1, filename = excluded.filename;";
 
@@ -20,14 +20,14 @@ void CallGraph::addEdge(std::string caller, std::string callee, bool onThread) {
   std::vector<std::string> params;
 
   if (caller != callee) {
-    query = "INSERT OR IGNORE INTO nodes_table (funcname, recently_changed) "
+    query = "INSERT OR IGNORE INTO functions_table (funcname, recently_changed) "
             "VALUES (?, 0);";
     params = {callee};
     db->prepareStatement(stmt, query, params);
     db->runStatement(stmt);
 
-    query = "INSERT OR IGNORE INTO adjacency_matrix (funcname1, "
-            "funcname2, on_thread) "
+    query = "INSERT OR IGNORE INTO function_calls (caller, "
+            "callee, on_thread) "
             "VALUES (?, ?, ?);";
 
     params = {caller, callee, db->createBoolean(onThread)};
@@ -47,7 +47,7 @@ void CallGraph::markNodes(std::vector<std::string> &startNodes,
   sqlite3_stmt *stmt;
 
   while (!q.empty()) {
-    std::string query = "UPDATE nodes_table SET marked = 1, recently_changed = "
+    std::string query = "UPDATE functions_table SET marked = 1, recently_changed = "
                         "1 WHERE funcname IN " +
                         db->createTupleList(q) + ";";
     db->prepareStatement(stmt, query, q);
@@ -56,45 +56,45 @@ void CallGraph::markNodes(std::vector<std::string> &startNodes,
     if (reverse) {
       query =
           "WITH neighbors AS ("
-          " SELECT funcname1 AS funcname, COUNT(*) AS cnt FROM "
-          "adjacency_matrix "
-          " JOIN nodes_table ON nodes_table.funcname = "
-          " adjacency_matrix.funcname1 WHERE adjacency_matrix.funcname2 IN " +
+          " SELECT caller AS funcname, COUNT(*) AS cnt FROM "
+          "function_calls "
+          " JOIN functions_table ON functions_table.funcname = "
+          " function_calls.caller WHERE function_calls.callee IN " +
           db->createTupleList(q) +
-          " AND nodes_table.filename IS NOT NULL"
-          " GROUP BY funcname1"
+          " AND functions_table.filename IS NOT NULL"
+          " GROUP BY caller"
           "),"
           "result AS ("
           " SELECT neighbors.funcname FROM neighbors"
-          " INNER JOIN nodes_table ON nodes_table.funcname = neighbors.funcname"
+          " INNER JOIN functions_table ON functions_table.funcname = neighbors.funcname"
           " WHERE marked = 0"
           ")"
-          "UPDATE nodes_table "
+          "UPDATE functions_table "
           "SET indegree = indegree + COALESCE(("
           " SELECT cnt FROM neighbors WHERE neighbors.funcname = "
-          " nodes_table.funcname"
+          " functions_table.funcname"
           "), 0);";
     } else {
       query =
           "WITH neighbors AS ("
-          " SELECT funcname2 AS funcname, COUNT(*) AS cnt FROM "
-          "adjacency_matrix "
-          " JOIN nodes_table ON nodes_table.funcname = "
-          " adjacency_matrix.funcname2 WHERE "
-          " adjacency_matrix.funcname1 IN " +
+          " SELECT callee AS funcname, COUNT(*) AS cnt FROM "
+          "function_calls "
+          " JOIN functions_table ON functions_table.funcname = "
+          " function_calls.callee WHERE "
+          " function_calls.caller IN " +
           db->createTupleList(q) +
-          " AND nodes_table.filename IS NOT NULL"
-          " GROUP BY funcname2"
+          " AND functions_table.filename IS NOT NULL"
+          " GROUP BY callee"
           "),"
           "result AS ("
           " SELECT neighbors.funcname FROM neighbors"
-          " INNER JOIN nodes_table ON nodes_table.funcname = neighbors.funcname"
+          " INNER JOIN functions_table ON functions_table.funcname = neighbors.funcname"
           " WHERE marked = 0"
           ")"
-          "UPDATE nodes_table "
+          "UPDATE functions_table "
           "SET indegree = indegree + COALESCE(("
           " SELECT cnt FROM neighbors WHERE neighbors.funcname = "
-          " nodes_table.funcname"
+          " functions_table.funcname"
           "), 0);";
     }
 
@@ -102,7 +102,7 @@ void CallGraph::markNodes(std::vector<std::string> &startNodes,
     db->runStatement(stmt);
 
     query =
-        "SELECT funcname FROM nodes_table WHERE marked = 0 AND indegree > 0;";
+        "SELECT funcname FROM functions_table WHERE marked = 0 AND indegree > 0;";
 
     db->prepareStatement(stmt, query);
 
@@ -119,7 +119,7 @@ std::vector<std::string>
 CallGraph::getNextNodes(std::vector<std::string> &order) {
   sqlite3_stmt *stmt;
   std::string query =
-      "SELECT funcname FROM nodes_table WHERE marked = 1 AND indegree = 0;";
+      "SELECT funcname FROM functions_table WHERE marked = 1 AND indegree = 0;";
   db->prepareStatement(stmt, query);
   std::vector<std::string> q = {};
   while (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -129,7 +129,7 @@ CallGraph::getNextNodes(std::vector<std::string> &order) {
   }
   sqlite3_finalize(stmt);
 
-  query = "UPDATE nodes_table SET marked = 0 WHERE funcname "
+  query = "UPDATE functions_table SET marked = 0 WHERE funcname "
           "IN " +
           db->createTupleList(q) + ";";
   db->prepareStatement(stmt, query, q);
@@ -148,45 +148,45 @@ std::vector<std::string> CallGraph::traverseGraph(bool reverse = false) {
     if (reverse) {
       query =
           "WITH neighbors AS ("
-          " SELECT funcname1 AS funcname, COUNT(*) AS cnt FROM "
-          "adjacency_matrix "
-          " JOIN nodes_table ON nodes_table.funcname = "
-          " adjacency_matrix.funcname1 WHERE adjacency_matrix.funcname2 IN " +
+          " SELECT caller AS funcname, COUNT(*) AS cnt FROM "
+          "function_calls "
+          " JOIN functions_table ON functions_table.funcname = "
+          " function_calls.caller WHERE function_calls.callee IN " +
           db->createTupleList(q) +
-          " AND nodes_table.filename IS NOT NULL"
-          " GROUP BY funcname1"
+          " AND functions_table.filename IS NOT NULL"
+          " GROUP BY caller"
           "),"
           "result AS ("
           " SELECT neighbors.funcname FROM neighbors"
-          " INNER JOIN nodes_table ON nodes_table.funcname = neighbors.funcname"
+          " INNER JOIN functions_table ON functions_table.funcname = neighbors.funcname"
           " WHERE marked = 1"
           ")"
-          "UPDATE nodes_table "
+          "UPDATE functions_table "
           "SET indegree = indegree - COALESCE(("
           " SELECT cnt FROM neighbors WHERE neighbors.funcname = "
-          " nodes_table.funcname"
+          " functions_table.funcname"
           "), 0);";
     } else {
       query =
           "WITH neighbors AS ("
-          " SELECT funcname2 AS funcname, COUNT(*) AS cnt FROM "
-          "adjacency_matrix "
-          " JOIN nodes_table ON nodes_table.funcname = "
-          " adjacency_matrix.funcname2 WHERE "
-          " adjacency_matrix.funcname1 IN " +
+          " SELECT callee AS funcname, COUNT(*) AS cnt FROM "
+          "function_calls "
+          " JOIN functions_table ON functions_table.funcname = "
+          " function_calls.callee WHERE "
+          " function_calls.caller IN " +
           db->createTupleList(q) +
-          " AND nodes_table.filename IS NOT NULL"
-          " GROUP BY funcname2"
+          " AND functions_table.filename IS NOT NULL"
+          " GROUP BY callee"
           "),"
           "result AS ("
           " SELECT neighbors.funcname FROM neighbors"
-          " INNER JOIN nodes_table ON nodes_table.funcname = neighbors.funcname"
+          " INNER JOIN functions_table ON functions_table.funcname = neighbors.funcname"
           " WHERE marked = 1"
           ")"
-          "UPDATE nodes_table "
+          "UPDATE functions_table "
           "SET indegree = indegree - COALESCE(("
           " SELECT cnt FROM neighbors WHERE neighbors.funcname = "
-          " nodes_table.funcname"
+          " functions_table.funcname"
           "), 0);";
     }
 
@@ -219,7 +219,7 @@ std::vector<std::string> CallGraph::functionVariableLocksetsOrdering(
 bool CallGraph::shouldVisitNode(std::string funcName) {
   sqlite3_stmt *stmt;
   std::string query =
-      "SELECT 1 FROM nodes_table WHERE funcname = ? AND recently_changed = 1;";
+      "SELECT 1 FROM functions_table WHERE funcname = ? AND recently_changed = 1;";
 
   std::vector<std::string> params = {funcName};
   db->prepareStatement(stmt, query, params);
@@ -230,49 +230,49 @@ bool CallGraph::shouldVisitNode(std::string funcName) {
 
 void CallGraph::markNodesAsStale(std::string fileName) {
   sqlite3_stmt *stmt;
-  std::string query = "UPDATE nodes_table SET stale = 1 WHERE filename = ? AND "
+  std::string query = "UPDATE functions_table SET stale = 1 WHERE filename = ? AND "
                       "recently_changed = 0;";
 
   std::vector<std::string> params = {fileName};
   db->prepareStatement(stmt, query, params);
   db->runStatement(stmt);
 
-  query = "DELETE FROM adjacency_matrix WHERE funcname1 IN "
-          "(SELECT funcname FROM nodes_table WHERE filename = ?);";
+  query = "DELETE FROM function_calls WHERE caller IN "
+          "(SELECT funcname FROM functions_table WHERE filename = ?);";
 
   db->prepareStatement(stmt, query, params);
   db->runStatement(stmt);
 
   query = "DELETE FROM function_recursive_unlocks WHERE funcname IN "
-          "(SELECT funcname FROM nodes_table WHERE filename = ?);";
+          "(SELECT funcname FROM functions_table WHERE filename = ?);";
 
   db->prepareStatement(stmt, query, params);
   db->runStatement(stmt);
 
   query = "DELETE FROM function_variable_locksets_callers WHERE caller IN "
-          "(SELECT funcname FROM nodes_table WHERE filename = ?);";
+          "(SELECT funcname FROM functions_table WHERE filename = ?);";
 
   db->prepareStatement(stmt, query, params);
   db->runStatement(stmt);
 
   query =
-      "DELETE FROM function_variable_cumulative_locksets_outputs WHERE "
-      "function_variable_cumulative_locksets_id IN "
-      "(SELECT id FROM function_variable_cumulative_locksets WHERE funcname IN "
-      "(SELECT funcname FROM nodes_table WHERE filename = ?));";
+      "DELETE FROM function_cumulative_locksets_outputs WHERE "
+      "function_cumulative_locksets_id IN "
+      "(SELECT id FROM function_cumulative_locksets WHERE funcname IN "
+      "(SELECT funcname FROM functions_table WHERE filename = ?));";
 
   db->prepareStatement(stmt, query, params);
   db->runStatement(stmt);
 
-  query = "DELETE FROM function_variable_cumulative_accesses WHERE funcname IN "
-          "(SELECT funcname FROM nodes_table WHERE filename = ?);";
+  query = "DELETE FROM function_cumulative_accesses WHERE funcname IN "
+          "(SELECT funcname FROM functions_table WHERE filename = ?);";
 
   db->prepareStatement(stmt, query, params);
   db->runStatement(stmt);
 
   query = "UPDATE function_variable_locksets SET recently_changed = 1 WHERE "
           "funcname IN "
-          "(SELECT funcname FROM nodes_table WHERE filename = ?);";
+          "(SELECT funcname FROM functions_table WHERE filename = ?);";
 
   db->prepareStatement(stmt, query, params);
   db->runStatement(stmt);
@@ -280,7 +280,7 @@ void CallGraph::markNodesAsStale(std::string fileName) {
 
 void CallGraph::deleteStaleNodes() {
   sqlite3_stmt *stmt;
-  std::string query = "DELETE FROM nodes_table WHERE stale = 1";
+  std::string query = "DELETE FROM functions_table WHERE stale = 1";
 
   db->prepareStatement(stmt, query);
   db->runStatement(stmt);
@@ -288,7 +288,7 @@ void CallGraph::deleteStaleNodes() {
 
 std::string CallGraph::getFilenameFromFuncname(std::string funcName) {
   sqlite3_stmt *stmt;
-  std::string query = "SELECT filename FROM nodes_table WHERE funcname = ?;";
+  std::string query = "SELECT filename FROM functions_table WHERE funcname = ?;";
 
   std::vector<std::string> params = {funcName};
   db->prepareStatement(stmt, query, params);

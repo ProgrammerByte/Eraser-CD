@@ -147,8 +147,8 @@ FunctionInputs FunctionVariableLocksets::updateAndCheckCombinedInputs() {
     std::unordered_map<std::string, std::set<std::string>> callerLocksets = {};
     std::vector<std::string> callers = {};
 
-    query = "SELECT funcname1 FROM adjacency_matrix AS am JOIN "
-            "function_variable_locksets AS fvl ON am.funcname2 = fvl.funcname "
+    query = "SELECT caller FROM function_calls AS am JOIN "
+            "function_variable_locksets AS fvl ON am.callee = fvl.funcname "
             "WHERE fvl.id = ?;";
 
     params = {id};
@@ -356,7 +356,7 @@ void FunctionVariableLocksets::markFunctionVariableLocksetsAsOld() {
   db->runStatement(stmt);
 
   query =
-      "UPDATE function_variable_cumulative_locksets SET recently_changed = 0;";
+      "UPDATE function_cumulative_locksets SET recently_changed = 0;";
   db->prepareStatement(stmt, query);
   db->runStatement(stmt);
 }
@@ -382,10 +382,10 @@ std::vector<std::string> FunctionVariableLocksets::getFunctionsForTesting() {
   std::string query = "UPDATE function_variable_locksets "
                       "SET callee_locks_changed = 1 "
                       "WHERE funcname IN ("
-                      "  SELECT am.funcname1 AS funcname "
-                      "  FROM adjacency_matrix AS am "
+                      "  SELECT am.caller AS funcname "
+                      "  FROM function_calls AS am "
                       "  JOIN function_eraser_sets AS fes "
-                      "  ON am.funcname2 = fes.funcname "
+                      "  ON am.callee = fes.funcname "
                       "  WHERE fes.locks_changed = 1"
                       ");";
 
@@ -394,7 +394,7 @@ std::vector<std::string> FunctionVariableLocksets::getFunctionsForTesting() {
 
   query = "SELECT funcname FROM function_variable_locksets WHERE "
           "callee_locks_changed = 1 "
-          "UNION SELECT funcname FROM nodes_table WHERE recently_changed = 1";
+          "UNION SELECT funcname FROM functions_table WHERE recently_changed = 1";
 
   db->prepareStatement(stmt, query);
 

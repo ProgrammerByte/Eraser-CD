@@ -52,18 +52,14 @@ void ConstructionEnvironment::onElseAdd() {
 void ConstructionEnvironment::onAdd(EndifNode *node) {
   IfNode *ifNode = ifStack.back();
   std::vector<BasicNode *> endifNodes = endifListStack.back();
-  node->priorNodes = 0;
   for (int i = 0; i < endifNodes.size(); i++) {
-    node->priorNodes += 1;
     endifNodes[i]->add(node);
   }
   if (ifNode->ifNode == nullptr) {
-    node->priorNodes += 1;
     ifNode->ifNode = node;
   }
   if (!ifNode->hasElse) {
     ifNode->hasElse = true;
-    node->priorNodes += 1;
     ifNode->add(node);
   }
 
@@ -74,7 +70,6 @@ void ConstructionEnvironment::onAdd(EndifNode *node) {
     currNode = node;
     setNodeId(node);
   } else {
-    node->priorNodes += 1;
     callOnAdd(node);
   }
   // TODO - THIS REQUIRES SOME THOUGHT!!!
@@ -114,7 +109,6 @@ void ConstructionEnvironment::onAdd(EndwhileNode *node) {
   for (int i = 0; i < breakNodes.size(); i++) {
     breakNodes[i]->next = node;
   }
-  node->priorNodes = breakNodes.size();
   currNode = node;
   setNodeId(node);
 }
