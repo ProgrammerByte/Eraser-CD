@@ -33,7 +33,6 @@ void Database::runStatement(sqlite3_stmt *stmt) {
   sqlite3_finalize(stmt);
 }
 
-// TODO - DELETING / CREATING DATABASE FOR PROTOTYPE ONLY!!!
 void Database::deleteDatabase() {
   if (std::remove(dbName.c_str()) == 0) {
     std::cout << "Database file \"" << dbName << "\" deleted successfully"
@@ -173,8 +172,6 @@ void Database::createTables() {
   )",
               "active_threads");
 
-  // TODO - THIS NEEDS TO BE USED FOR EVICTING CACHE IN TOP DOWN STAGE I.E.
-  // GARBAGE COLLECTION VIA REFERENCE COUNTING
   createTable(R"(
     CREATE TABLE function_variable_locksets (
       id INTEGER PRIMARY KEY,
