@@ -214,9 +214,6 @@ void handleFunctionCall(CXCursor cursor, std::vector<GraphNode *> *nodesToAdd) {
     if (varName != "") {
       environment->onAdd(new ThreadJoinNode(varName, global));
     }
-    // TODO - USE SECOND ARG FOR RETURN VALUE, MAKE WRITE NODE AS NEEDED
-    // however can be generalised somewhat i.e. if passing ptr to func then
-    // treat as write. Okay for this algorithm
   } else if (!eraserIgnoreOn) {
     if (funcName == "pthread_create") {
       std::string called = getNthArg(cursor, 3);
@@ -230,8 +227,6 @@ void handleFunctionCall(CXCursor cursor, std::vector<GraphNode *> *nodesToAdd) {
         if (global && varName != "") {
           environment->onAdd(new WriteNode(varName));
         }
-        // TODO - MAYBE CHANGE EDGE TYPE HERE?? ONLY AN OPTIMISATION FOR DELTA
-        // LOCKSETS
         if (updateCallGraph) {
           callGraph->addEdge(caller, funcName, true);
         }

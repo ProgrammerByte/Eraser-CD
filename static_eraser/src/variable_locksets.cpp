@@ -30,7 +30,6 @@ bool VariableLocksets::variableWrite(std::string varName,
 
 bool VariableLocksets::handleNode(FunctionCallNode *node,
                                   std::set<std::string> &locks) {
-  // TODO - MARK CURRENT NODES IN FOR QUEUE FOR CALLEE!!!
   std::string functionName = node->functionName;
   if (functionName != currFunc) {
     if (funcCallLocksets.find(functionName) == funcCallLocksets.end()) {
@@ -194,8 +193,6 @@ void VariableLocksets::updateLocksets() {
         functionVariableLocksets->updateAndCheckCombinedInputs();
     std::unordered_map<std::string, std::set<std::string>> combinedInputs =
         functionInputs.changedTests;
-    // TODO - use functionInputs.reachableTests at some point!!! - revise
-    // this!!!
 
     debugCout << "Function: " << funcName << std::endl;
     for (const auto &pair : combinedInputs) {

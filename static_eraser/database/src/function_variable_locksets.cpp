@@ -84,7 +84,6 @@ void FunctionVariableLocksets::applyDeltaLockset(std::set<std::string> &locks,
 
 FunctionInputs FunctionVariableLocksets::updateAndCheckCombinedInputs() {
   FunctionInputs functionInputs = {{}, {}};
-  // TODO - HARD CODED TEST!!!
   if (currFunc == "main") {
     functionInputs.changedTests.insert({"debug", {}});
     functionInputs.reachableTests = {"debug"};
@@ -103,8 +102,6 @@ FunctionInputs FunctionVariableLocksets::updateAndCheckCombinedInputs() {
   std::vector<std::string> params = {currFunc, currFunc};
   db->prepareStatement(stmt, query, params);
 
-  // TODO - MAYBE recently_changed FOR FUNCTION CHANGED AND A SEPARATE
-  // inputs_changed?
   query = "SELECT id, testname, recently_changed FROM "
           "function_variable_locksets WHERE funcname = ?;";
   params = {currFunc};
@@ -249,7 +246,6 @@ void FunctionVariableLocksets::addFuncCallLocksets(
     std::set<std::string> locks = pair.second;
 
     std::string funcId = getId(funcName, currTest);
-    // TODO - for an optimisation change to caller_locksets_changed
     query = "UPDATE function_variable_locksets SET recently_changed = 1 "
             "WHERE id = ?;";
     params = {funcId};

@@ -5,5 +5,4 @@ LockNode::LockNode(std::string varName)
     : varName(varName), BasicNode::BasicNode(NodeType::LOCK) {}
 LockNode::~LockNode() = default;
 
-// TODO - IDENTIFIER
 std::string LockNode::getPrintableName() { return "Lock " + varName; }

@@ -381,8 +381,6 @@ void DeltaLockset::handleFunction(GraphNode *startNode) {
   nodeSets.clear();
 }
 
-// TODO - startNode unlocks should be used by static eraser to remove from
-// current lockset before calling function
 void DeltaLockset::updateLocksets(std::vector<std::string> changedFunctions) {
   std::vector<std::string> ordering =
       callGraph->deltaLocksetOrdering(changedFunctions);

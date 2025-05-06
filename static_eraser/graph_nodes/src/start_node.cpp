@@ -7,5 +7,4 @@ StartNode::StartNode(std::string funcName)
 }
 StartNode::~StartNode() = default;
 
-// TODO - ADD FUNCTION NAME HERE MAYBE???
 std::string StartNode::getPrintableName() { return "Function " + funcName; }

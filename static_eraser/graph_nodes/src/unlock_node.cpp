@@ -5,5 +5,4 @@ UnlockNode::UnlockNode(std::string varName)
     : varName(varName), BasicNode::BasicNode(NodeType::UNLOCK) {}
 UnlockNode::~UnlockNode() = default;
 
-// TODO - IDENTIFIER
 std::string UnlockNode::getPrintableName() { return "Unlock " + varName; }

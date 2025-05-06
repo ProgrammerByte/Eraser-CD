@@ -72,7 +72,6 @@ void ConstructionEnvironment::onAdd(EndifNode *node) {
   } else {
     callOnAdd(node);
   }
-  // TODO - THIS REQUIRES SOME THOUGHT!!!
 }
 
 void ConstructionEnvironment::onAdd(StartwhileNode *node) {
