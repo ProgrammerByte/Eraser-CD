@@ -199,8 +199,6 @@ std::vector<std::string> CallGraph::traverseGraph(bool reverse = false) {
   return order;
 }
 
-// TODO - DOESN'T IGNORE THREAD CREATE EDGES AS IT SHOULD ALTHOUGH MAYBE NOT A
-// HUGE ISSUE IF REUSED ELSEWHERE
 std::vector<std::string>
 CallGraph::deltaLocksetOrdering(std::vector<std::string> functions) {
   markNodes(functions, true);
@@ -209,8 +207,6 @@ CallGraph::deltaLocksetOrdering(std::vector<std::string> functions) {
 
 std::vector<std::string> CallGraph::functionVariableLocksetsOrdering(
     std::vector<std::string> functions) {
-  // TODO - INCLUDE PARENTS OF FUNCTIONS WITH CHANGED DELTA LOCKSETS HERE
-  // LATER!!!
   markNodes(functions);
   return traverseGraph();
 }
